@@ -14,7 +14,7 @@ def client():
     with TestClient(app) as test_client:
         login = test_client.post("/api/auth/login", json={"email": DEMO_EMAIL, "password": DEMO_PASSWORD})
         assert login.status_code == 200, login.text
-        test_client.headers.update({"Authorization": f"Bearer {login.json()['access_token']}"})
+        test_client.headers["Authorization"] = f"Bearer {login.json()['access_token']}"
         yield test_client
 
 
