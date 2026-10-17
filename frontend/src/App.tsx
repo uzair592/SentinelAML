@@ -147,7 +147,7 @@ function severityClass(severity: string) {
   return severity === "high" ? "severity-high" : severity === "medium" ? "severity-medium" : "severity-low";
 }
 function ruleLabel(rule: string) {
-  return rule.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
+  return rule.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (letter: string) => letter.toUpperCase());
 }
 
 function NoticeBar({ notice, onClose }: { notice: Notice; onClose: () => void }) {
@@ -233,7 +233,6 @@ function App() {
 
   const setMappingField = (field: CanonicalField, value: string | null) => setMapping((current) => ({ ...current, [field]: value }));
   const requiredMapped = Boolean(mapping.timestamp && mapping.amount && mapping.source_account);
-  const hasResult = Boolean(result);
   const totalHigh = result?.summary.alerts_by_severity.high || 0;
   const totalMedium = result?.summary.alerts_by_severity.medium || 0;
   const currentNavLabel = navItems.find((item) => item.key === page)?.label || "Overview";
@@ -403,7 +402,7 @@ function App() {
     const headers = ["alert_id", "rule_id", "severity", "title", "subject_reference", "evidence_row_numbers", "explanation"];
     const escapeCsv = (value: unknown) => {
       const text = Array.isArray(value) ? value.join("; ") : String(value ?? "");
-      return `"${text.replaceAll('"', '""')}"`;
+      return `"${text.replace(/"/g, '""')}"`;
     };
     const csv = [headers.join(","), ...result.alerts.map((alert) => headers.map((header) => escapeCsv((alert as unknown as Record<string, unknown>)[header])).join(","))].join("\r\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
