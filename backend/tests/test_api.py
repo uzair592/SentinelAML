@@ -15,9 +15,9 @@ def test_health_endpoint():
 
 def test_csv_preview_and_analysis_workflow():
     payload = (
-        "Transaction ID,Transaction Date,Transaction Amount,Debit Account,Currency\\n"
-        "T-100,2026-10-01 09:00:00,2500,A-100,PKR\\n"
-        "T-101,2026-10-01 09:15:00,100,A-200,PKR\\n"
+        "Transaction ID,Transaction Date,Transaction Amount,Debit Account,Currency\n"
+        "T-100,2026-10-01 09:00:00,2500,A-100,PKR\n"
+        "T-101,2026-10-01 09:15:00,100,A-200,PKR\n"
     ).encode("utf-8")
     preview = client.post(
         "/api/files/preview",
