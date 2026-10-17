@@ -403,7 +403,7 @@ function App() {
     const escapeCsv = (value: unknown) => {
       const rawText = Array.isArray(value) ? value.join("; ") : String(value ?? "");
       // Prevent spreadsheet formula injection from source-controlled account identifiers.
-      const safeText = /^[=+\\-@\\t\\r]/.test(rawText) ? "'" + rawText : rawText;
+      const safeText = /^[=+\-@\t\r]/.test(rawText) ? "'" + rawText : rawText;
       return `"${safeText.replace(/"/g, '""')}"`;
     };
     const csv = [headers.join(","), ...result.alerts.map((alert) => headers.map((header) => escapeCsv((alert as unknown as Record<string, unknown>)[header])).join(","))].join("\r\n");
