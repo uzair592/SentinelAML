@@ -964,6 +964,89 @@ function App() {
             </div>
           )}
 
+          {page === "cases" && (
+            <section className="case-page-layout">
+              <div className="case-page-heading"><div><div className="command-overline"><ListChecks size={14} /> CASE MANAGEMENT</div><h2>Investigation queue</h2><p>Persistent analyst cases built from evidence-linked alert snapshots.</p></div><span className="data-state-pill live-state">{cases.length} saved cases</span></div>
+              <section className="command-panel cases-table-panel">
+                <div className="command-panel-heading"><div><h3>Case register</h3><p>Assign, investigate and record a human disposition.</p></div><button className="btn btn-secondary" onClick={() => setPage("alerts")}><ShieldAlert size={15} /> View alerts</button></div>
+                {cases.length ? <div className="cases-list">
+                  {cases.map((item) => <button className="case-list-row" key={item.id} onClick={() => { setSelectedCase(item); setPage("investigations"); }}>
+                    <span className={`case-priority case-priority-${item.severity}`}><ShieldAlert size={17} /></span>
+                    <span className="case-row-main"><strong>{item.title}</strong><small>{item.case_reference} · {item.alert_id} · {dateLabel(item.created_at)}</small></span>
+                    <span className={`case-status case-status-${item.status}`}>{item.status.replaceAll("_", " ")}</span>
+                    <span className="severity-pill"><span />{item.severity}</span><ArrowRight size={14} className="muted-icon" />
+                  </button>)}
+                </div> : <div className="empty-state"><div className="empty-icon"><ListChecks size={25} /></div><h3>No saved cases yet</h3><p>Analyze a transaction file, open a generated alert, and select “Create investigation case”. The case will then persist in the local application database.</p><button className="btn btn-primary" onClick={() => setPage("sources")}><UploadCloud size={15} /> Import transaction data</button></div>}
+              </section>
+              <div className="case-guardrail"><ShieldCheck size={16} /><span>Case notes, status changes and generated reports are persisted. Raw uploaded transactions are not stored as a dataset.</span></div>
+            </section>
+          )}
+
+          {page === "investigations" && (
+            <section className="investigation-workspace">
+              <div className="case-page-heading"><div><div className="command-overline"><Sparkles size={14} /> MULTI-AGENT WORKFLOW</div><h2>Investigation workbench</h2><p>Plan the review, assemble evidence, retrieve approved policy passages and create a human-review draft.</p></div><span className="data-state-pill live-state">Human approval required</span></div>
+              <div className="investigation-columns">
+                <section className="command-panel case-picker-panel">
+                  <div className="command-panel-heading"><div><h3>Case queue</h3><p>Select a case to investigate</p></div><button className="ghost-icon" onClick={() => setPage("cases")} aria-label="Open case register"><ArrowRight size={15} /></button></div>
+                  {cases.length ? cases.map((item) => <button className={`case-picker-row ${selectedCase?.id === item.id ? "selected" : ""}`} key={item.id} onClick={() => setSelectedCase(item)}>
+                    <span className={`case-priority case-priority-${item.severity}`}><ShieldAlert size={15} /></span><span><strong>{item.case_reference}</strong><small>{item.title}</small></span><span className={`case-status case-status-${item.status}`}>{item.status.replaceAll("_", " ")}</span>
+                  </button>) : <div className="panel-empty-note"><ListChecks size={20} /><span>Create a case from any real analysis alert to start the investigation workflow.</span></div>}
+                </section>
+
+                <section className="command-panel investigation-detail-panel">
+                  {selectedCase ? <>
+                    <div className="command-panel-heading"><div><span className="case-reference-label">{selectedCase.case_reference}</span><h3>{selectedCase.title}</h3><p>{selectedCase.alert_id} · Source alert: {selectedCase.alert_snapshot?.rule_id}</p></div><span className={`case-status case-status-${selectedCase.status}`}>{selectedCase.status.replaceAll("_", " ")}</span></div>
+                    <div className="investigation-alert-summary">
+                      <div className="case-summary-metric"><small>Priority</small><span className={`severity-pill ${severityClass(selectedCase.severity)}`}><span />{selectedCase.severity}</span></div>
+                      <div className="case-summary-metric"><small>Evidence references</small><strong>{number(selectedCase.alert_snapshot?.evidence_count)}</strong></div>
+                      <div className="case-summary-metric"><small>Source account</small><strong className="mono">{selectedCase.subject_reference || "Not available"}</strong></div>
+                    </div>
+                    <div className="case-alert-explanation"><label>TRIGGERING RULE EXPLANATION</label><p>{selectedCase.alert_snapshot?.explanation}</p><div className="evidence-chips">{(selectedCase.alert_snapshot?.evidence_row_numbers || []).slice(0, 12).map((row) => <span key={row}>Source row {row}</span>)}</div></div>
+                    <div className="investigation-input-block"><label htmlFor="investigator-question">Investigator question (optional)</label><textarea id="investigator-question" value={caseQuestion} onChange={(event) => setCaseQuestion(event.target.value)} placeholder="e.g. What policy checks apply, and what evidence is still missing?" rows={3} maxLength={1000} /><div className="investigation-button-row"><span>4 bounded agents · no source writes</span><button className="btn btn-primary" disabled={caseBusy} onClick={() => void generateInvestigation()}>{caseBusy ? <RefreshCw className="spin" size={15} /> : <Sparkles size={15} />} Run investigation</button></div></div>
+                    <div className="case-status-toolbar"><button className="btn btn-secondary" disabled={caseBusy || selectedCase.status === "in_review"} onClick={() => void changeCaseStatus(selectedCase, "in_review")}>Mark in review</button><button className="btn btn-secondary" disabled={caseBusy || selectedCase.status === "escalated"} onClick={() => void changeCaseStatus(selectedCase, "escalated", "escalated_for_review")}>Escalate</button><button className="btn btn-secondary" disabled={caseBusy || selectedCase.status === "closed"} onClick={() => void changeCaseStatus(selectedCase, "closed", selectedCase.disposition || "insufficient_information")}>Close case</button></div>
+                    {selectedCase.investigation_report && <>
+                      <div className="investigation-report-head"><div><div className="command-overline"><BadgeCheck size={14} /> GENERATED DRAFT</div><h3>{selectedCase.investigation_report.report?.title || "Investigation report"}</h3></div><span className="data-state-pill demo-state">{selectedCase.investigation_report.report?.mode || "draft"}</span></div>
+                      <p className="report-summary">{selectedCase.investigation_report.report?.summary}</p>
+                      <div className="agent-progress-grid">{(selectedCase.investigation_report.agents || []).map((agent: Record<string, any>) => <div className="agent-progress-item" key={agent.agent}><span className="agent-check"><Check size={13} /></span><span><strong>{agent.agent}</strong><small>{agent.status === "no_material_found" ? "No policy passage found" : agent.status}</small></span></div>)}</div>
+                      <div className="report-section"><h4>Recommended review steps</h4><ol>{(selectedCase.investigation_report.report?.recommended_review_steps || []).map((step: string, index: number) => <li key={index}>{step}</li>)}</ol></div>
+                      <div className="report-section"><h4>Policy citations and evidence</h4>{(selectedCase.investigation_report.report?.policy_citations || []).length ? selectedCase.investigation_report.report.policy_citations.map((citation: Record<string, any>, index: number) => <div className="policy-citation-card" key={citation.chunk_id || index}><strong>{citation.citation || citation.title}</strong><p>{citation.excerpt || "Retrieved policy passage"}</p></div>) : <p className="report-muted">No matching policy material was found. Upload the applicable approved policy in Policy Intelligence.</p>}</div>
+                      <div className="case-guardrail"><ShieldCheck size={16} /><span>Draft only. Verify evidence against the source records and confirm that each policy is current before taking any action.</span></div>
+                    </>}
+                  </> : <div className="empty-state"><div className="empty-icon"><Sparkles size={25} /></div><h3>Select an investigation case</h3><p>Choose a saved case from the queue or create a case from an alert in the Alerts page.</p><button className="btn btn-secondary" onClick={() => setPage("cases")}>Open case register <ArrowRight size={14} /></button></div>}
+                </section>
+              </div>
+            </section>
+          )}
+
+          {page === "policies" && (
+            <section className="policy-workspace">
+              <div className="case-page-heading"><div><div className="command-overline"><BookOpenText size={14} /> POLICY INTELLIGENCE</div><h2>Approved policy library</h2><p>Index authorized PDF, TXT or Markdown procedures and retrieve source-linked passages for investigations.</p></div><span className="data-state-pill live-state">{policyDocs.length} documents indexed</span></div>
+              <div className="policy-top-grid">
+                <section className="command-panel policy-upload-panel">
+                  <div className="command-panel-heading"><div><h3>Add a policy document</h3><p>Text is extracted and chunked for local lexical retrieval.</p></div><FileUp size={17} className="muted-icon" /></div>
+                  <label className="policy-dropzone"><input type="file" accept=".pdf,.txt,.md,.markdown" onChange={(event) => { const file = event.target.files?.[0] || null; void uploadPolicy(file); event.currentTarget.value = ""; }} /><span className="policy-drop-icon"><UploadCloud size={23} /></span><strong>Upload approved policy</strong><small>PDF, TXT or Markdown · up to configured size limit</small><span className="policy-browse">Choose document</span></label>
+                  <div className="policy-safe-note"><LockKeyhole size={14} /> Add only authorized, version-checked policy materials. Scanned PDFs require a separate approved OCR process.</div>
+                </section>
+                <section className="command-panel policy-search-panel">
+                  <div className="command-panel-heading"><div><h3>Policy passage search</h3><p>Search across indexed content with transparent lexical matching.</p></div><Search size={17} className="muted-icon" /></div>
+                  <div className="policy-search-box"><Search size={16} /><input value={policyQuery} onChange={(event) => setPolicyQuery(event.target.value)} placeholder="e.g. customer due diligence, suspicious transactions" onKeyDown={(event) => { if (event.key === "Enter") void searchPolicies(); }} /><button disabled={caseBusy} onClick={() => void searchPolicies()}>Search</button></div>
+                  <p className="policy-method-note">Current retrieval is a lexical baseline, not semantic embeddings. Search results require a reviewer to verify source applicability and version.</p>
+                </section>
+              </div>
+              {policyResults.length > 0 && <section className="command-panel policy-results-panel"><div className="command-panel-heading"><div><h3>Retrieved passages</h3><p>Ranked by term overlap · citations point to indexed files and pages</p></div><span className="panel-tag">{policyResults.length} results</span></div>{policyResults.map((item) => <div className="policy-result-card" key={item.chunk_id}><div className="policy-result-meta"><strong>{item.title}</strong><span>{item.citation} · score {item.score}</span></div><p>{item.content}</p></div>)}</section>}
+              <section className="command-panel policies-library-panel"><div className="command-panel-heading"><div><h3>Indexed documents</h3><p>Source hash and chunk count are retained to support traceability.</p></div><span className="panel-tag">{policyDocs.length} files</span></div>{policyDocs.length ? <div className="policies-table-wrap"><table className="compact-table policies-table"><thead><tr><th>Document</th><th>Source file</th><th>Pages</th><th>Search chunks</th><th>Indexed</th></tr></thead><tbody>{policyDocs.map((doc) => <tr key={doc.id}><td>{doc.title}</td><td>{doc.file_name}</td><td>{doc.page_count || "—"}</td><td>{doc.chunk_count}</td><td>{doc.created_at ? dateLabel(doc.created_at) : "—"}</td></tr>)}</tbody></table></div> : <div className="empty-state small-empty"><div className="empty-icon"><BookOpenText size={23} /></div><h3>No policy documents indexed</h3><p>Upload an approved public regulation or institution-approved procedure to enable cited policy retrieval.</p></div>}</section>
+              <div className="case-guardrail"><ShieldCheck size={16} /><span>Policy uploads are not automatically treated as authoritative or current. Verify the source, amendments and institution applicability.</span></div>
+            </section>
+          )}
+
+          {page === "audit" && (
+            <section className="command-panel audit-panel">
+              <div className="command-panel-heading"><div><div className="command-overline"><ShieldCheck size={14} /> AUDITABILITY</div><h3>Recent activity events</h3><p>Events generated by sign-in, analysis runs, case changes and policy ingestion.</p></div><span className="panel-tag">{auditEvents.length} events</span></div>
+              {auditEvents.length ? <div className="audit-list">{auditEvents.map((event, index) => <div className="audit-row" key={String(event.id || index)}><span className="audit-icon"><Activity size={15} /></span><span className="audit-main"><strong>{String(event.action || "activity")}</strong><small>{String(event.resource_type || "resource")} · {String(event.resource_id || "—")}</small></span><code>{String(event.actor_id || "system").slice(0, 12)}</code><time>{dateLabel(String(event.created_at || ""))}</time></div>)}</div> : <div className="empty-state"><div className="empty-icon"><ShieldCheck size={24} /></div><h3>No events found</h3><p>Authentication and case activity will appear here after you use the application.</p></div>}
+              <div className="case-guardrail"><LockKeyhole size={15} /><span>This is an application audit log, not yet a tamper-evident or regulator-certified audit store.</span></div>
+            </section>
+          )}
+
           {page === "alerts" && (
             <section className="panel full-panel">
               <div className="panel-heading"><div><h3>Alert explorer</h3><p>Every signal points to measured evidence from the current analysis.</p></div><div className="alert-toolbar"><span className="results-count">{visibleAlerts.length} signals</span>{result && <button className="btn btn-secondary" onClick={exportAlerts}><ArrowDownToLine size={15} /> Export CSV</button>}</div></div>
