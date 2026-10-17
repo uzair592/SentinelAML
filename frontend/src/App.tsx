@@ -306,7 +306,7 @@ function App() {
   const [page, setPage] = useState<PageKey>("overview");
   const [accessTokenState, setAccessTokenState] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
-  const [loginEmail, setLoginEmail] = useState("sentinel.admin@sentinelaml.local");
+  const [loginEmail, setLoginEmail] = useState("sentinel.admin@example.com");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginBusy, setLoginBusy] = useState(false);
   const [loginError, setLoginError] = useState("");
