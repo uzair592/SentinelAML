@@ -1,0 +1,28 @@
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+!.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+.coverage
+htmlcov/
+
+# Node / Vite
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Local sample database source files
+backend/source-databases/
+source-databases/
+
+# Editors and OS
+.DS_Store
+.idea/
+.vscode/
