@@ -1,62 +1,68 @@
 # SentinelAML Roadmap
 
 ## Milestone 0 — Foundation and blueprint
-- [x] Establish product goal, constraints, architecture, flow diagram, ERD, rules, security model, and API contract.
-- [x] Add repository conventions, local setup, environment examples, and CI.
+- [x] Product goal, architecture, flow diagrams, ERD, canonical schema, rule catalogue, security baseline and API contract.
+- [x] Repository setup instructions, synthetic data, starter tests and GitHub Actions CI.
 
-## Milestone 1 — Ingestion-first working prototype
-- [x] React portal with navigation, overview dashboard and data-source workflow.
-- [x] CSV/XLSX preview, file validation, sheet selection and column mapping.
-- [x] Shared canonical schema and validation reports.
-- [x] Deterministic KPIs and currency-separated totals.
-- [x] Initial explainable rules with exact evidence row references.
-- [x] Results table with alert detail panels and CSV export.\n- [ ] Add alert search/severity filters and JSON export.
-- [x] Unit tests and synthetic sample data.
+## Milestone 1 — Ingestion and analytics
+- [x] Responsive React dashboard and data-source workflow.
+- [x] CSV/XLSX/XLS preview, validation, sheet selection and field mapping.
+- [x] Shared canonical transaction model, KPIs and currency-separated totals.
+- [x] Explainable deterministic rules with source row references.
+- [x] Alert detail panel and formula-safe CSV alert export.
+- [x] API and unit tests for upload and core analysis.
 
-**Acceptance:** User can choose a sample/own CSV or XLSX, review the inferred columns, map required fields, run analysis, and see repeatable KPIs and evidence-backed alerts.
+## Milestone 2 — SQL source connectors
+- [x] Request-scoped credentials, host allowlisting, engine checks and timeouts.
+- [x] Connection test, accessible table discovery, bounded preview and same-engine analysis.
+- [x] Host policy unit tests.
+- [ ] Database integration tests for driver permutations, statement timeout and TLS enforcement.
+- [ ] Harden database-specific timeouts and certificate policy before bank use.
 
-## Milestone 2 — SQL connector
-- [x] Select supported database engine.
-- [x] Request-scoped credentials and secure form behavior.
-- [x] Host allowlisting, connection timeouts and driver validation.\n- [ ] Add database-specific statement timeouts and stronger TLS configuration.
-- [x] Test connection and list accessible tables.
-- [x] Preview columns and capped row sample.
-- [x] Map fields and analyze with the same engine.
-- [ ] Tests for disallowed hosts, drivers, paths, missing tables, and timeout failures.
+## Milestone 3 — Persistent investigation workspace
+- [x] Authenticated API routes and local development sign-in.
+- [x] Persistent analysis metadata and evidence-backed case snapshots.
+- [x] Case creation, list/detail, notes, status, disposition and event history.
+- [x] Application audit events for sign-in, analysis, case updates and policy upload.
+- [ ] Full user administration, assignment UX, comments/attachments and supervisor approval screens.
+- [ ] Institutional SSO/MFA, full RBAC review and tenant isolation.
 
-**Acceptance:** A dedicated read-only SQL account can be tested against an approved development source; table import is bounded and no credentials are persisted or logged.
+## Milestone 4 — Bounded multi-agent investigation
+- [x] Four-step workflow: planner, evidence analyst, policy retrieval, report synthesis.
+- [x] Rule-aware review questions, evidence and data-quality context, limitations, and human-review draft.
+- [x] Safe deterministic report fallback when an external model is unavailable.
+- [x] Optional externally hosted LLM report drafting, disabled by default, with account-field minimization and citation-ID validation.
+- [ ] Persistent workflow checkpointing, retries, idempotency, per-step audit detail and deeper transaction evidence tools.
+- [ ] Evaluate grounding, citation correctness, safe refusal and usefulness with a labeled investigation test set.
+- [ ] Add model/provider governance and formal approval controls before processing institution data.
 
-## Milestone 3 — Investigation workspace
-- [ ] Alert detail view and transaction timeline.
-- [ ] Evidence panel with calculation details and source row references.
-- [ ] Analyst notes, disposition, assignment and case history.
-- [ ] Versioned rule configurations and reproducible exports.
+## Milestone 5 — Policy knowledge base
+- [x] Authorized PDF/TXT/Markdown ingestion, SHA-256 duplicate tracking and persisted text chunks.
+- [x] Lexical retrieval with document and page/section references.
+- [x] Policy search UI and citation display in the investigation workspace.
+- [ ] Semantic embeddings/vector retrieval, version dates, amendment linking and conflict detection.
+- [ ] Ingest and validate official policy sources; confirm currentness and institution applicability.
+- [ ] Prompt-injection, stale-source and retrieval-quality tests.
 
-## Milestone 4 — Agentic investigation
-- [ ] Stateful orchestrator with typed, allowlisted tools.
-- [ ] Evidence-first plan: gather transactions, compute statistics, retrieve approved policies, produce a sourced draft.
-- [ ] Retry, timeout, token-budget and bounded-step safeguards.
-- [ ] Human approval checkpoint for case actions.
-- [ ] Evaluation set for groundedness, tool correctness and safe escalation.
+## Milestone 6 — Modern command-center dashboard
+- [x] Dark Power BI-inspired dashboard with KPI cards, trend sparkline panels, risk distribution, alert tables and status panels.
+- [x] Clearly labeled synthetic demo preview and live analysis mode.
+- [x] Case queue, policy library and audit activity screens.
+- [ ] Add chart filtering and drill-through tied to historical saved analysis runs.
+- [ ] Replace demo-only map/region/watchlist visuals with actual authorized source-backed data when available.
 
-## Milestone 5 — Policy knowledge base and governance
-- [ ] Ingest approved public policies and institution-approved procedures.
-- [ ] Metadata, document hash, source URL, publication/version date and chunk citations.
-- [ ] Tests for stale sources, conflicting guidance and prompt injection.
-- [ ] Model/rule cards, limitations, monitoring and change management.
+## Milestone 7 — Bank production readiness
+- [ ] Approved infrastructure, network segmentation, TLS enforcement, secrets manager and key rotation.
+- [ ] Encryption and retention controls, tested backups, tamper-evident audit storage and incident response.
+- [ ] Async/background jobs, monitoring, rate limits, resource quotas and disaster recovery.
+- [ ] Independent threat model, penetration test, dependency scanning and secure code review.
+- [ ] Institution-specific rule calibration, model validation, legal/compliance approval and controlled pilot.
 
-## Milestone 6 — Hardening
-- [ ] Authentication, MFA/SSO integration, RBAC, organization/tenant isolation.
-- [ ] Production secrets, database TLS, egress restrictions, encryption and retention.
-- [ ] Background workers and scalable storage for large data sources.
-- [ ] CI, dependency scanning, security testing and independent review.
-- [ ] Bank-specific validation and formally approved operational procedures.
+## Definition of done
 
-## Definition of done for every milestone
-
-- Code has automated tests and clear setup notes.
-- No credentials or real customer data are committed.
-- Errors are actionable but do not reveal secrets.
-- Architecture and API docs match behavior.
-- Detection results describe observed patterns rather than asserting criminality.
-- No consequential account or regulatory action happens without authorized human approval.
+- Automated tests and local setup instructions pass and match actual behavior.
+- No secrets or real customer data are committed.
+- Every alert is explainable and traceable to source references and a rule version.
+- AI reports distinguish observed facts, retrieved sources, uncertainty and follow-up questions.
+- Policy citations point to actual indexed content; external model use remains opt-in and governed.
+- No consequential account or regulatory action occurs without authorized human approval.
