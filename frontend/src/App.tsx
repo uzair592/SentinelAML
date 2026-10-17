@@ -8,6 +8,17 @@ import {
 } from "lucide-react";
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) || "http://127.0.0.1:8000";
+let accessToken: string | null = null;
+
+type CurrentUser = { id: string; email: string; display_name: string; role: string };
+type CaseItem = {
+  id: string; case_reference: string; analysis_run_id: string; alert_id: string; title: string;
+  severity: string; status: string; disposition: string | null; subject_reference: string | null;
+  alert_snapshot: AlertItem; analyst_notes: string; created_at: string; updated_at: string;
+  assigned_to: string | null; created_by: string; investigation_report?: Record<string, any> | null;
+};
+type PolicyDoc = { id: string; title: string; file_name: string; page_count: number; chunk_count: number; created_at: string | null };
+type PolicyResult = { chunk_id: string; document_id: string; title: string; citation: string; page_number: number | null; score: number; content: string };
 
 type ColumnInfo = { name: string; inferred_type: string; null_count: number; sample_values: string[] };
 type PreviewData = {
@@ -58,6 +69,7 @@ type AnalysisResult = {
   rule_counts: Record<string, number>;
   options_used: Record<string, number>;
   warnings: string[];
+  analysis_run_id?: string;
 };
 type CanonicalField = "timestamp" | "amount" | "source_account" | "transaction_id" | "destination_account" | "customer_id" | "currency" | "transaction_type" | "channel" | "status" | "country" | "balance_after";
 type SqlConnection = {
@@ -96,6 +108,9 @@ const navItems = [
   { key: "sources", label: "Data sources", icon: Database },
   { key: "alerts", label: "Alerts & signals", icon: ShieldAlert },
   { key: "investigations", label: "Investigations", icon: ListChecks },
+  { key: "cases", label: "Investigation cases", icon: ListChecks },
+  { key: "policies", label: "Policy intelligence", icon: BookOpenText },
+  { key: "audit", label: "Audit trail", icon: ShieldCheck },
   { key: "quality", label: "Data quality", icon: Activity },
 ] as const;
 type PageKey = typeof navItems[number]["key"];
@@ -117,7 +132,9 @@ const INITIAL_OPTIONS = {
 async function apiRequest(path: string, init: RequestInit = {}) {
   let response: Response;
   try {
-    response = await fetch(API_BASE + path, init);
+    const headers = new Headers(init.headers || {});
+    if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
+    response = await fetch(API_BASE + path, { ...init, headers });
   } catch {
     throw new Error(`Cannot reach the SentinelAML API at ${API_BASE}. Start the backend and try again.`);
   }
@@ -214,6 +231,19 @@ function AlertsTable({ alerts, onInspect }: { alerts: AlertItem[]; onInspect: (a
 
 function App() {
   const [page, setPage] = useState<PageKey>("overview");
+  const [accessTokenState, setAccessTokenState] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const [loginEmail, setLoginEmail] = useState("sentinel.admin@sentinelaml.local");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginBusy, setLoginBusy] = useState(false);
+  const [cases, setCases] = useState<CaseItem[]>([]);
+  const [selectedCase, setSelectedCase] = useState<CaseItem | null>(null);
+  const [caseQuestion, setCaseQuestion] = useState("");
+  const [caseBusy, setCaseBusy] = useState(false);
+  const [policyDocs, setPolicyDocs] = useState<PolicyDoc[]>([]);
+  const [policyQuery, setPolicyQuery] = useState("");
+  const [policyResults, setPolicyResults] = useState<PolicyResult[]>([]);
+  const [auditEvents, setAuditEvents] = useState<Record<string, unknown>[]>([]);
   const [sourceMode, setSourceMode] = useState<"file" | "sql">("file");
   const [file, setFile] = useState<File | null>(null);
   const [sheetName, setSheetName] = useState("");
