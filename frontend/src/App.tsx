@@ -347,6 +347,12 @@ function App() {
   const metricAccounts = result ? result.summary.unique_source_accounts : 2431;
   const metricOpenCases = cases.filter((item) => item.status === "open" || item.status === "in_review").length;
   const metricAverageRisk = result ? Math.min(99, Math.round((metricHighAlerts / Math.max(result.summary.alert_count, 1)) * 100)) : 68;
+  const distributionHigh = isDemoPreview ? 312 : (result?.summary.alerts_by_severity.high || 0);
+  const distributionMedium = isDemoPreview ? 1024 : (result?.summary.alerts_by_severity.medium || 0);
+  const distributionLow = isDemoPreview ? 1095 : (result?.summary.alerts_by_severity.low || 0);
+  const distributionTotal = Math.max(1, distributionHigh + distributionMedium + distributionLow);
+  const distributionHighPct = distributionHigh / distributionTotal * 100;
+  const distributionMediumPct = (distributionHigh + distributionMedium) / distributionTotal * 100;
 
   // Keep SQL credentials in memory only; clear them when leaving the connector workflow.
   useEffect(() => {
@@ -772,17 +778,17 @@ function App() {
               </div>
 
               <div className="command-kpis">
-                <MetricCard icon={<ShieldAlert size={17} />} label="Total alerts" value={number(metricTotalAlerts)} note={result ? "Current analysis run" : "Demo-only example"} tone="teal" trend={result ? `${number(metricHighAlerts)} high priority` : "+18.6% vs previous period"} points={[12, 18, 15, 24, 20, 31, 36, 42]} />
-                <MetricCard icon={<Activity size={17} />} label="High-risk alerts" value={number(metricHighAlerts)} note={result ? "Require analyst review" : "Illustrative sample"} tone="red" trend={result ? "Heuristic signal count" : "+2.4% vs previous period"} points={[28, 23, 33, 29, 41, 37, 49, 54]} />
-                <MetricCard icon={<ListChecks size={17} />} label="Open investigations" value={number(metricOpenCases || (isDemoPreview ? 32 : 0))} note={isDemoPreview && !cases.length ? "Synthetic placeholder" : "Persisted case records"} tone="blue" trend={`${number(cases.filter((item) => item.status === "escalated").length)} escalated`} points={[10, 14, 13, 18, 16, 23, 20, 26]} />
-                <MetricCard icon={<ArrowLeftRight size={17} />} label="Transactions analyzed" value={compact(metricTransactions)} note={result ? `${number(result.summary.analyzed_transactions)} valid rows` : "Synthetic example volume"} tone="green" trend={result ? `${number(result.summary.excluded_transactions)} excluded` : "Illustrative only"} points={[18, 20, 18, 30, 28, 35, 32, 43]} />
-                <MetricCard icon={<Gauge size={17} />} label="Risk index" value={number(metricAverageRisk)} note={result ? "High-alert share index" : "Illustrative synthetic score"} tone="violet" trend={isDemoPreview ? "Demo score only" : "Not a probability of crime"} points={[16, 22, 20, 18, 28, 30, 26, 37]} />
+                <MetricCard icon={<ShieldAlert size={17} />} label="Total alerts" value={number(metricTotalAlerts)} note={result ? "Current analysis run" : "Demo-only example"} tone="teal" trend={result ? `${number(metricHighAlerts)} high priority` : "+18.6% vs previous period"} points={isDemoPreview ? [12, 18, 15, 24, 20, 31, 36, 42] : []} />
+                <MetricCard icon={<Activity size={17} />} label="High-risk alerts" value={number(metricHighAlerts)} note={result ? "Require analyst review" : "Illustrative sample"} tone="red" trend={result ? "Heuristic signal count" : "+2.4% vs previous period"} points={isDemoPreview ? [28, 23, 33, 29, 41, 37, 49, 54] : []} />
+                <MetricCard icon={<ListChecks size={17} />} label="Open investigations" value={number(metricOpenCases || (isDemoPreview ? 32 : 0))} note={isDemoPreview && !cases.length ? "Synthetic placeholder" : "Persisted case records"} tone="blue" trend={`${number(cases.filter((item) => item.status === "escalated").length)} escalated`} points={isDemoPreview ? [10, 14, 13, 18, 16, 23, 20, 26] : []} />
+                <MetricCard icon={<ArrowLeftRight size={17} />} label="Transactions analyzed" value={compact(metricTransactions)} note={result ? `${number(result.summary.analyzed_transactions)} valid rows` : "Synthetic example volume"} tone="green" trend={result ? `${number(result.summary.excluded_transactions)} excluded` : "Illustrative only"} points={isDemoPreview ? [18, 20, 18, 30, 28, 35, 32, 43] : []} />
+                <MetricCard icon={<Gauge size={17} />} label={result ? "High-alert share" : "Risk index"} value={number(metricAverageRisk)} note={result ? "Share of alerts rated high" : "Synthetic demo score"} tone="violet" trend={isDemoPreview ? "Demo score only" : "Not a probability of crime"} points={isDemoPreview ? [16, 22, 20, 18, 28, 30, 26, 37] : []} />
               </div>
 
               <div className="command-grid command-grid-top">
                 <section className="command-panel map-panel">
                   <div className="command-panel-heading"><div><h3>Exposure activity map</h3><p>{isDemoPreview ? "Illustrative markers · not real geographic or customer data" : "Geography is only available if your imported dataset contains it"}</p></div><span className="panel-tag">OVERVIEW</span></div>
-                  <div className="map-panel-body"><div className="map-glow" /><MiniWorldMap /><div className="map-legend"><span><i className="legend-dot high-dot" /> High</span><span><i className="legend-dot medium-dot" /> Medium</span><span><i className="legend-dot low-dot" /> Low</span></div></div>
+                  <div className="map-panel-body">{isDemoPreview ? <><div className="map-glow" /><MiniWorldMap /><div className="map-legend"><span><i className="legend-dot high-dot" /> High</span><span><i className="legend-dot medium-dot" /> Medium</span><span><i className="legend-dot low-dot" /> Low</span></div></> : <div className="panel-empty-note"><Network size={24} /><span>No geographic view is inferred from this run. Map only approved country/geospatial data after field mapping and validation.</span></div>}</div>
                   <div className="map-footer"><span><span className="status-dot" /> {isDemoPreview ? "Synthetic preview active" : `${number(result?.summary.unique_source_accounts)} source accounts in analysis`}</span><span>{isDemoPreview ? "No live feeds connected" : "No live feed connected"}</span></div>
                 </section>
 
@@ -842,12 +848,12 @@ function App() {
 
               <div className="command-grid command-grid-bottom">
                 <section className="command-panel bottom-chart-panel">
-                  <div className="command-panel-heading"><div><h3>Customer risk distribution</h3><p>{isDemoPreview ? "Illustrative synthetic scoring" : "Risk scoring model not configured"}</p></div><Users size={16} className="muted-icon" /></div>
-                  <div className="customer-risk-body"><div className="customer-ring"><div><strong>{number(metricAccounts)}</strong><span>Accounts</span></div></div><div className="customer-legend"><span><i className="legend-dot high-dot" />High risk <b>{isDemoPreview ? "312" : number(metricHighAlerts)}</b></span><span><i className="legend-dot medium-dot" />Medium <b>{isDemoPreview ? "1,024" : "—"}</b></span><span><i className="legend-dot low-dot" />Low <b>{isDemoPreview ? "1,095" : "—"}</b></span></div></div>
+                  <div className="command-panel-heading"><div><h3>{isDemoPreview ? "Customer risk distribution" : "Alert severity mix"}</h3><p>{isDemoPreview ? "Synthetic customer-level illustration" : "Current alerts by rule severity; no customer risk model is configured"}</p></div><Users size={16} className="muted-icon" /></div>
+                  <div className="customer-risk-body"><div className="customer-ring" style={{ background: `conic-gradient(#fb7185 0 ${distributionHighPct}%, #fbbf24 ${distributionHighPct}% ${distributionMediumPct}%, #2dd4bf ${distributionMediumPct}% 100%)` }}><div><strong>{number(isDemoPreview ? metricAccounts : (result?.summary.alert_count || 0))}</strong><span>{isDemoPreview ? "Accounts" : "Alerts"}</span></div></div><div className="customer-legend"><span><i className="legend-dot high-dot" />High <b>{number(distributionHigh)}</b></span><span><i className="legend-dot medium-dot" />Medium <b>{number(distributionMedium)}</b></span><span><i className="legend-dot low-dot" />Low <b>{number(distributionLow)}</b></span></div></div>
                 </section>
                 <section className="command-panel bottom-chart-panel">
                   <div className="command-panel-heading"><div><h3>Risk signal trend</h3><p>{isDemoPreview ? "Sample activity curve" : "Historical time series not stored in this run"}</p></div><Activity size={16} className="muted-icon" /></div>
-                  <div className="trend-value"><strong>{number(metricAverageRisk)}</strong><span>Risk index</span></div><Sparkline values={[16, 22, 20, 18, 29, 26, 31, 27, 39, 34, 45, 49]} color="#2dd4bf" height={74} /><div className="axis-labels"><span>Earlier</span><span>Recent</span></div>
+                  {isDemoPreview ? <><div className="trend-value"><strong>{number(metricAverageRisk)}</strong><span>Synthetic index</span></div><Sparkline values={[16, 22, 20, 18, 29, 26, 31, 27, 39, 34, 45, 49]} color="#2dd4bf" height={74} /><div className="axis-labels"><span>Earlier</span><span>Recent</span></div></> : <div className="panel-empty-note trend-empty"><Activity size={22} /><span>This run has no persisted time series. A truthful trend chart will be available once time-bucketed historical analysis is implemented.</span></div>}
                 </section>
                 <section className="command-panel bottom-chart-panel">
                   <div className="command-panel-heading"><div><h3>Compliance knowledge</h3><p>Approved policy library status</p></div><BookOpenText size={16} className="muted-icon" /></div>
@@ -857,7 +863,7 @@ function App() {
                 <section className="command-panel bottom-chart-panel">
                   <div className="command-panel-heading"><div><h3>Watchlist screening</h3><p>{isDemoPreview ? "Illustrative sample only" : "External lists are not integrated"}</p></div><Fingerprint size={16} className="muted-icon" /></div>
                   <div className="watchlist-number">{isDemoPreview ? "24" : "—"}<span>{isDemoPreview ? "synthetic hits" : "not connected"}</span></div>
-                  <div className="bar-chart">{[24, 40, 32, 46, 59, 36, 18].map((height, index) => <div className="bar-column" key={index}><span style={{ height: `${height}%` }} /><small>{["M", "T", "W", "T", "F", "S", "S"][index]}</small></div>)}</div>
+                  {isDemoPreview ? <div className="bar-chart">{[24, 40, 32, 46, 59, 36, 18].map((height, index) => <div className="bar-column" key={index}><span style={{ height: `${height}%` }} /><small>{["M", "T", "W", "T", "F", "S", "S"][index]}</small></div>)}</div> : <div className="panel-empty-note trend-empty"><Fingerprint size={22} /><span>Watchlist matching is not connected. No screening hits are reported for imported data.</span></div>}
                   <div className="panel-footnote">No external sanctions or PEP screening is performed in this MVP.</div>
                 </section>
               </div>
@@ -1077,7 +1083,7 @@ function MetricCard({ icon, label, value, note, tone, trend, points }: {
   const lineColor = tone === "red" ? "#fb7185" : tone === "blue" ? "#60a5fa" : tone === "green" ? "#2dd4bf" : tone === "violet" ? "#c084fc" : "#2dd4bf";
   return <section className="metric-card">
     <div className="metric-card-top"><span className={`metric-icon metric-icon-${tone}`}>{icon}</span><span className="metric-label">{label}</span><span className="metric-more">•••</span></div>
-    <div className="metric-main-row"><strong>{value}</strong><Sparkline values={points} color={lineColor} height={38} /></div>
+    <div className="metric-main-row"><strong>{value}</strong>{points.length > 0 && <Sparkline values={points} color={lineColor} height={38} />}</div>
     <div className="metric-note"><span>{note}</span><small>{trend}</small></div>
   </section>;
 }
