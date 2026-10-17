@@ -39,7 +39,7 @@ python -m venv .venv
 # macOS/Linux: source .venv/bin/activate
 python -m pip install -r requirements.txt
 # Copy .env.example to .env; the default CORS origin is http://127.0.0.1:5173
-uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+uvicorn app.main:app --reload --env-file .env --host 127.0.0.1 --port 8000
 ```
 
 Health check: http://127.0.0.1:8000/api/health  
