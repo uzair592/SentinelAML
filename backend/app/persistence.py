@@ -174,7 +174,7 @@ def init_db() -> None:
         first_user = db.scalar(select(User.id).limit(1))
         if first_user is None:
             if not email:
-                email = "sentinel.admin@sentinelaml.local"
+                email = "sentinel.admin@example.com"
             if not password and environment != "production":
                 password = "ChangeThis-LocalOnly-123!"
             if not password:
