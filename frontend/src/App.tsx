@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   Activity, ArrowDownToLine, ArrowLeftRight, ArrowRight, Bell, BookOpenText,
   Building2, Check, ChevronDown, CircleHelp, Clock3, Database, FileSpreadsheet, FileUp,
-  Fingerprint, Gauge, LayoutDashboard, ListChecks, LockKeyhole, Menu, Network,
+  Fingerprint, Gauge, LayoutDashboard, ListChecks, LockKeyhole, LogOut, Menu, Network,
   RefreshCw, Search, ShieldAlert, ShieldCheck, SlidersHorizontal, Sparkles, UploadCloud,
   Users, X, Zap,
 } from "lucide-react";
@@ -694,6 +694,8 @@ function App() {
     setNotice({ kind: "info", text: "Workspace results cleared. Your original source file was never saved by this page." });
   };
 
+  if (!accessTokenState) return <LoginScreen email={loginEmail} password={loginPassword} setEmail={setLoginEmail} setPassword={setLoginPassword} onSubmit={signIn} busy={loginBusy} error={loginError} />;
+
   return (
     <div className="app-shell">
       <aside className={`sidebar ${mobileNav ? "sidebar-open" : ""}`}>
@@ -721,7 +723,7 @@ function App() {
         <button className="nav-item" onClick={() => setNotice({ kind: "info", text: "Rule catalogue and design references are available in the repository's docs/ folder." })}><BookOpenText size={18} strokeWidth={1.8} /><span>Rule catalogue</span></button>
         <div className="sidebar-bottom">
           <div className="security-note"><div className="security-icon"><LockKeyhole size={16} /></div><div><strong>Privacy-first MVP</strong><p>Results are held in this browser session. Use synthetic data.</p></div></div>
-          <div className="user-profile"><div className="user-avatar">SA</div><div><strong>Sentinel Analyst</strong><small>Prototype operator</small></div><ChevronDown size={15} className="muted-icon" /></div>
+          <div className="user-profile"><div className="user-avatar">{currentUser?.display_name?.slice(0, 2).toUpperCase() || "SA"}</div><div><strong>{currentUser?.display_name || "Sentinel Analyst"}</strong><small>{currentUser?.role || "Analyst"}</small></div><button className="icon-button" title="Sign out" aria-label="Sign out" onClick={signOut}><LogOut size={15} /></button></div>
         </div>
       </aside>
 
@@ -734,7 +736,7 @@ function App() {
             <div className="breadcrumb"><span>SentinelAML</span><span className="crumb-slash">/</span><strong>{currentNavLabel}</strong></div>
           </div>
           <div className="topbar-actions">
-            <span className="environment-chip"><span /> Prototype environment</span>
+            <span className="environment-chip"><span /> {result ? "Analysis loaded" : "Synthetic demo preview"}</span>
             <button className="icon-button" aria-label="Help" onClick={() => setNotice({ kind: "info", text: "Start from Data sources: preview a CSV/Excel file or test an approved SQL connection, map columns, then run analysis." })}><CircleHelp size={18} /></button>
             <button className="icon-button notification-button" aria-label="Notifications" onClick={() => setPage("alerts")}><Bell size={18} />{result && result.summary.alert_count > 0 && <i />}</button>
           </div>
@@ -745,7 +747,7 @@ function App() {
             <div>
               <div className="eyebrow"><span className="eyebrow-dot" /> FINANCIAL CRIME INTELLIGENCE</div>
               <h1>{page === "overview" ? "Risk overview" : currentNavLabel}</h1>
-              <p>{page === "overview" ? "Turn transaction data into explainable signals for analyst review." : page === "sources" ? "Import transaction records or securely inspect an approved SQL source." : page === "alerts" ? "Review rule-triggered signals and inspect the underlying evidence." : page === "quality" ? "Understand missing, invalid, or inconsistent transaction data." : "Case orchestration and human approvals are part of the next milestone."}</p>
+              <p>{page === "overview" ? "Turn transaction data into explainable signals for analyst review." : page === "sources" ? "Import transaction records or securely inspect an approved SQL source." : page === "alerts" ? "Review rule-triggered signals and inspect the underlying evidence." : page === "cases" ? "Track persisted investigations, dispositions and case ownership." : page === "policies" ? "Upload approved policy documents and retrieve source-linked passages." : page === "audit" ? "Review recorded sign-in, analysis, policy and case actions." : page === "quality" ? "Understand missing, invalid, or inconsistent transaction data." : "Run a bounded investigation workflow and prepare a report for human review."}</p>
             </div>
             <div className="heading-actions">
               {result && <button className="btn btn-secondary" onClick={resetWorkspace}><RefreshCw size={16} /> Clear run</button>}
@@ -994,7 +996,7 @@ function App() {
         </div>
       </main>
 
-      {selectedAlert && <AlertDrawer alert={selectedAlert} onClose={() => setSelectedAlert(null)} />}
+      {selectedAlert && <AlertDrawer alert={selectedAlert} onClose={() => setSelectedAlert(null)} onCreateCase={(alert) => { setSelectedAlert(null); void openCaseFromAlert(alert); }} canCreateCase={Boolean(result?.analysis_run_id)} caseBusy={caseBusy} />}
     </div>
   );
 }
@@ -1011,7 +1013,9 @@ function EmptyPanel({ title, description, onAction }: { title: string; descripti
   return <div className="empty-state"><div className="empty-icon"><FileUp size={25} /></div><h3>{title}</h3><p>{description}</p><button className="btn btn-primary" onClick={onAction}><UploadCloud size={16} /> Go to data sources</button></div>;
 }
 
-function AlertDrawer({ alert, onClose }: { alert: AlertItem; onClose: () => void }) {
+function AlertDrawer({ alert, onClose, onCreateCase, canCreateCase, caseBusy }: {
+  alert: AlertItem; onClose: () => void; onCreateCase: (alert: AlertItem) => void; canCreateCase: boolean; caseBusy: boolean;
+}) {
   return (
     <div className="drawer-scrim" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <aside className="alert-drawer" aria-label="Alert details">
@@ -1022,7 +1026,7 @@ function AlertDrawer({ alert, onClose }: { alert: AlertItem; onClose: () => void
         <div className="drawer-section"><label>EVIDENCE ROW REFERENCES</label><div className="evidence-chips">{alert.evidence_row_numbers.map((row) => <span key={row}>Row {row}</span>)}{alert.evidence_count > alert.evidence_row_numbers.length && <span>+{alert.evidence_count - alert.evidence_row_numbers.length} more</span>}</div><p className="muted-paragraph">Row numbers refer to the imported source's data rows. For SQL sources, use a stable source key where available.</p></div>
         <div className="drawer-section"><label>MEASURED VALUES</label><div className="measured-values">{Object.entries(alert.measured_values).map(([key, value]) => <div key={key}><span>{ruleLabel(key)}</span><strong>{typeof value === "object" ? JSON.stringify(value) : String(value)}</strong></div>)}</div></div>
         <div className="drawer-disclaimer"><ShieldCheck size={17} /><p>{alert.interpretation}</p></div>
-        <button className="btn btn-secondary drawer-close-btn" onClick={onClose}>Close review panel</button>
+        <div className="drawer-action-row">{canCreateCase && <button className="btn btn-primary" disabled={caseBusy} onClick={() => onCreateCase(alert)}>{caseBusy ? <RefreshCw className="spin" size={15} /> : <ListChecks size={15} />} Create investigation case</button>}<button className="btn btn-secondary drawer-close-btn" onClick={onClose}>Close review panel</button></div>
       </aside>
     </div>
   );
