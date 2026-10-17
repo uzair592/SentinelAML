@@ -1,70 +1,28 @@
-# API Contract — Initial Ingestion MVP
+# API Contract — SentinelAML Prototype
 
-Base path: `/api`. Payload schemas below describe the intended API; concrete endpoints may evolve as implementation lands.
+Base path: `/api`. Protected routes require:
 
-## Health
+```http
+Authorization: Bearer <short-lived access token>
+```
 
-### `GET /api/health`
-Returns service availability and API version. Must not expose environment variables or secrets.
+The access token lasts one hour and is held in frontend memory. Reloading the web page requires signing in again. The local admin bootstrap account is configured with `SENTINELAML_ADMIN_EMAIL` and `SENTINELAML_ADMIN_PASSWORD`.
 
-## File preview
+## Health and authentication
 
-### `POST /api/files/preview`
-Content type: `multipart/form-data`
+- `GET /api/health` — public liveness check; returns service and version.
+- `POST /api/auth/login` — public. JSON body: `{ "email": "...", "password": "..." }`. Returns `access_token`, `token_type`, expiry and minimal user profile.
+- `GET /api/auth/me` — returns the authenticated user's profile.
+- `GET /api/overview` — the current user's latest analysis summary, case counts and policy-document count.
 
-Fields:
-- `file`: CSV or Excel file.
-- `sheet_name`: optional workbook sheet name; if omitted, use the first sheet or require a choice for multi-sheet workbooks.
+## File ingestion and analysis
 
-Returns:
-- `filename` (sanitized display name)
-- `row_count` (bounded count or indication of truncation)
-- `columns[]`: name, inferred type, null count, sample values
-- `preview_rows[]`: bounded values
-- `mapping_suggestions`: canonical field to proposed source column
-- `warnings[]`
+- `POST /api/files/preview` — authenticated multipart upload of CSV/XLSX/XLS with optional `sheet_name`. Returns bounded preview rows, inferred column types, mapping suggestions and warnings.
+- `POST /api/files/analyze` — authenticated multipart upload with `file`, JSON string `mapping`, JSON string `options` and optional `sheet_name`. Uses the common analysis engine, persists analysis summary/alerts, and returns `analysis_run_id`.
 
-## File analysis
+Required canonical mappings: `timestamp`, `amount`, `source_account`.
 
-### `POST /api/files/analyze`
-Content type: `multipart/form-data`
-
-Fields:
-- `file`
-- `mapping`: JSON object mapping canonical fields to source column names.
-- `options`: JSON object of explicitly configurable thresholds.
-- `sheet_name`: optional.
-
-Required mapping keys: `timestamp`, `amount`, `source_account`.
-
-Response:
-- `summary`: transaction count, analyzed count, excluded count, date range, distinct-account counts.
-- `totals_by_currency[]`: totals and averages grouped by currency or a source-default bucket.
-- `data_quality[]`: finding key, severity, message, affected count, source row examples.
-- `alerts[]`: alert ID, rule ID/version, severity, title, explanation, evidence row references and measured values.
-- `rule_counts`: alert counts grouped by rule/severity.
-- `warnings[]`: limitations such as a missing optional field or mixed currencies.
-
-## SQL connector (request-scoped credentials)
-
-### `POST /api/sql/test`
-JSON body: `{ "connection": { ...connection fields... } }`
-Returns successful connection and engine label only; must never return the password or credential-bearing URL.
-
-### `POST /api/sql/tables`
-JSON body: connection fields.
-Returns discovered schemas/tables from the approved source. It must not execute user-submitted SQL.
-
-### `POST /api/sql/preview`
-JSON body: connection fields, validated schema/table, bounded `limit`.
-Returns columns, inferred types, preview rows, mapping suggestions and count/truncation metadata.
-
-### `POST /api/sql/analyze`
-JSON body: connection fields, validated schema/table, canonical mapping, rule options and bounded row limit.
-Uses the same analysis engine as file ingestion.
-
-## Canonical mapping
-
+Example mapping:
 ```json
 {
   "transaction_id": "Transaction Reference",
@@ -77,7 +35,56 @@ Uses the same analysis engine as file ingestion.
 }
 ```
 
-Only `timestamp`, `amount`, and `source_account` are mandatory for the initial analysis. The user confirms suggestions.
+## SQL source connector
+
+All routes below are authenticated. Connection credentials are request-scoped and must not be stored by the client.
+
+- `POST /api/sql/test` — test connection.
+- `POST /api/sql/tables` — list accessible schema/table metadata.
+- `POST /api/sql/preview` — bounded preview of a discovered table.
+- `POST /api/sql/analyze` — bounded table read + the common analysis engine; returns `analysis_run_id`.
+
+Supported engines are PostgreSQL, MySQL/MariaDB, and SQLite files under `SENTINELAML_SQLITE_ROOT`. Remote database hosts must be explicitly allowlisted at the API server. The browser cannot submit raw SQL.
+
+## Persistent cases
+
+- `GET /api/cases?limit=100` — list cases the authenticated user may access.
+- `POST /api/cases` — create a case from a persisted run and an alert:
+```json
+{
+  "analysis_run_id": "run-id-from-analysis",
+  "alert_id": "alert-id-from-that-run",
+  "title": "Optional analyst title",
+  "analyst_notes": "Optional initial notes"
+}
+```
+- `GET /api/cases/{case_id}` — case snapshot plus event history.
+- `PATCH /api/cases/{case_id}` — update status, disposition, notes, or assignment according to the current role guardrails.
+- `POST /api/cases/{case_id}/investigate` — JSON body `{ "question": "optional analyst question" }`. Runs the bounded four-agent workflow and persists a draft report for human review.
+
+Supported statuses: `open`, `in_review`, `escalated`, `closed`.
+
+Supported dispositions: `pending`, `no_concern_identified`, `escalated_for_review`, `reporting_consideration`, `insufficient_information`.
+
+## Policy intelligence
+
+- `GET /api/policies` — list indexed policy documents.
+- `POST /api/policies/upload` — compliance role only; multipart `file` and optional `title`. Accepts PDF, TXT and Markdown. Extracted text chunks persist in the metadata database.
+- `POST /api/policies/search` — JSON body `{ "query": "suspicious transaction monitoring", "limit": 5 }`. Returns source-linked lexical matches.
+
+The current retrieval approach is lexical term overlap, not semantic embeddings. Scanned PDFs without extractable text are rejected; OCR is not built into the MVP.
+
+## Audit activity
+
+- `GET /api/audit?limit=100` — compliance/admin/auditor role only. Returns DB-backed application events.
+- Events include authentication, analysis run, policy upload, case creation/update, and investigation-report generation.
+- The current audit table is not tamper-evident and is not a certified compliance archive.
+
+## Investigation workflow and model provider
+
+The workflow runs four bounded components: planner, evidence analyst, policy retrieval, and report synthesis. It uses saved alert snapshots, analysis summaries, and retrieved policy chunks; raw uploaded transaction rows are not persisted.
+
+External LLM synthesis is disabled by default. Set `SENTINELAML_LLM_PROVIDER=openai`, `OPENAI_API_KEY`, and an approved `SENTINELAML_LLM_MODEL` only after institution security/legal approval. The integration sends a minimized alert summary and retrieved policy passages; it must not be enabled for regulated customer data without explicit approval. If external synthesis fails or its citations do not match retrieved chunks, the workflow falls back to a deterministic evidence report.
 
 ## Example analysis options
 
@@ -89,24 +96,23 @@ Only `timestamp`, `amount`, and `source_account` are mandatory for the initial a
   "structuring_reference_threshold": 1000000,
   "structuring_min_transactions": 3,
   "structuring_window_hours": 24,
-  "outlier_mad_multiplier": 6
+  "outlier_mad_multiplier": 6,
+  "outlier_min_transactions": 8
 }
 ```
 
-These are illustrative demonstration values, not legal or regulatory thresholds.
+Thresholds are demonstration heuristics, not legally mandated values.
 
 ## Error model
 
-Use standard HTTP status codes and a safe response body, e.g.:
-
+Validation and application errors use standard HTTP status codes. The safe error envelope may be:
 ```json
 {
   "error": {
-    "code": "INVALID_MAPPING",
-    "message": "Map a timestamp, amount, and source account column before analysis.",
-    "details": ["source_account mapping is missing"]
+    "code": "VALIDATION_ERROR",
+    "message": "The request contains invalid fields.",
+    "details": [{"field": "mapping", "message": "Invalid value"}]
   }
 }
 ```
-
-Never put passwords, full connection URLs, access tokens, or unredacted financial rows in error details. Do not expose Python tracebacks to the browser.
+Some FastAPI domain errors use `detail`. Never expose passwords, full connection URLs, access tokens, unredacted financial data, or Python tracebacks in client-visible error messages.
