@@ -13,7 +13,7 @@ python -m venv .venv
 # source .venv/bin/activate
 python -m pip install -r requirements.txt
 copy .env.example .env
-uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+uvicorn app.main:app --reload --env-file .env --host 127.0.0.1 --port 8000
 ```
 
 On macOS/Linux, use `cp .env.example .env` instead of `copy`. The API health check is `http://127.0.0.1:8000/api/health`; local OpenAPI docs are at `http://127.0.0.1:8000/docs`.
