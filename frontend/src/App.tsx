@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   Activity, ArrowDownToLine, ArrowLeftRight, ArrowRight, BadgeCheck, Bell, BookOpenText,
-  Building2, Check, ChevronDown, CircleHelp, Clock3, Database, FileSpreadsheet, FileUp,
+  Building2, Check, ChevronDown, CircleHelp, Database, FileSpreadsheet, FileUp,
   Fingerprint, Gauge, LayoutDashboard, ListChecks, LockKeyhole, LogOut, Menu, Network,
   RefreshCw, Search, ShieldAlert, ShieldCheck, SlidersHorizontal, Sparkles, UploadCloud,
   Users, X, Zap,
@@ -337,8 +337,6 @@ function App() {
 
   const setMappingField = (field: CanonicalField, value: string | null) => setMapping((current) => ({ ...current, [field]: value }));
   const requiredMapped = Boolean(mapping.timestamp && mapping.amount && mapping.source_account);
-  const totalHigh = result?.summary.alerts_by_severity.high || 0;
-  const totalMedium = result?.summary.alerts_by_severity.medium || 0;
   const currentNavLabel = navItems.find((item) => item.key === page)?.label || "Overview";
   const visibleAlerts = useMemo(() => result?.alerts || [], [result]);
   const isDemoPreview = !result;
@@ -1082,14 +1080,6 @@ function MetricCard({ icon, label, value, note, tone, trend, points }: {
     <div className="metric-main-row"><strong>{value}</strong><Sparkline values={points} color={lineColor} height={38} /></div>
     <div className="metric-note"><span>{note}</span><small>{trend}</small></div>
   </section>;
-}
-
-function StatCard({ icon, label, value, note, tone }: { icon: ReactNode; label: string; value: string; note: string; tone: string }) {
-  return <section className="stat-card"><div className="stat-top"><div className={`stat-icon ${tone}`}>{icon}</div><span className="stat-period">Current run</span></div><div className="stat-label">{label}</div><div className="stat-value">{value}</div><div className="stat-note">{note}</div></section>;
-}
-
-function WorkflowStep({ number: stepNumber, title, description, status }: { number: string; title: string; description: string; status?: string }) {
-  return <div className={`workflow-step ${status === "current" ? "workflow-step-current" : ""}`}><div className="workflow-number">{stepNumber}</div><div className="workflow-text"><strong>{title}</strong><span>{description}</span></div>{status === "current" && <span className="current-step-dot" />}</div>;
 }
 
 function EmptyPanel({ title, description, onAction }: { title: string; description: string; onAction: () => void }) {
