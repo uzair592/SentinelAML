@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
-  Activity, ArrowDownToLine, ArrowLeftRight, ArrowRight, BadgeCheck, Bell, BookOpenText,
+  Activity, ArrowDownToLine, ArrowLeftRight, ArrowRight, Bell, BookOpenText,
   Building2, Check, ChevronDown, CircleHelp, Clock3, Database, FileSpreadsheet, FileUp,
   Filter, Fingerprint, Gauge, LayoutDashboard, ListChecks, LockKeyhole, Menu, Network,
   RefreshCw, Search, ShieldAlert, ShieldCheck, SlidersHorizontal, Sparkles, UploadCloud,
@@ -238,6 +238,19 @@ function App() {
   const totalMedium = result?.summary.alerts_by_severity.medium || 0;
   const currentNavLabel = navItems.find((item) => item.key === page)?.label || "Overview";
   const visibleAlerts = useMemo(() => result?.alerts || [], [result]);
+
+  // Keep SQL credentials in memory only; clear them when leaving the connector workflow.
+  useEffect(() => {
+    if (page !== "sources" || sourceMode !== "sql") {
+      setSql((current) => current.username || current.password || current.database
+        ? { ...current, username: "", password: "", database: "" }
+        : current);
+      setSqlConnected(false);
+      setTables([]);
+      setSelectedTable("");
+      setSelectedSchema(null);
+    }
+  }, [page, sourceMode]);
 
   const chooseFile = (selected: File | null) => {
     setFile(selected);
@@ -668,7 +681,7 @@ function App() {
   );
 }
 
-function StatCard({ icon, label, value, note, tone }: { icon: React.ReactNode; label: string; value: string; note: string; tone: string }) {
+function StatCard({ icon, label, value, note, tone }: { icon: ReactNode; label: string; value: string; note: string; tone: string }) {
   return <section className="stat-card"><div className="stat-top"><div className={`stat-icon ${tone}`}>{icon}</div><span className="stat-period">Current run</span></div><div className="stat-label">{label}</div><div className="stat-value">{value}</div><div className="stat-note">{note}</div></section>;
 }
 
