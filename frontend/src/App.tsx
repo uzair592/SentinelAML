@@ -294,6 +294,14 @@ function LoginScreen({ email, password, setEmail, setPassword, onSubmit, busy, e
   </div>;
 }
 
+const DEMO_ALERTS: AlertItem[] = [
+  { alert_id: "DEMO-ALR-78491", rule_id: "POSSIBLE_STRUCTURING", rule_version: "demo", severity: "high", status: "needs_review", title: "Repeated near-threshold activity", explanation: "Synthetic demo alert: several transactions fall just below a configurable reference threshold in a short period. The pattern requires context and does not establish intent.", subject_reference: "DEMO-ACC-1042", evidence_row_numbers: [12, 14, 18], evidence_count: 3, measured_values: { transaction_count: 3, window_hours: 24, data_source: "synthetic demo" }, interpretation: "Synthetic signal for interface demonstration only." },
+  { alert_id: "DEMO-ALR-78490", rule_id: "VELOCITY_SPIKE", rule_version: "demo", severity: "high", status: "needs_review", title: "Unusual transaction frequency", explanation: "Synthetic demo alert: transaction velocity crossed the configured demonstration threshold.", subject_reference: "DEMO-ACC-0831", evidence_row_numbers: [28, 29, 30, 31], evidence_count: 4, measured_values: { transaction_count: 12, window_minutes: 60 }, interpretation: "Synthetic signal for interface demonstration only." },
+  { alert_id: "DEMO-ALR-78489", rule_id: "HIGH_VALUE", rule_version: "demo", severity: "medium", status: "needs_review", title: "High-value transaction", explanation: "Synthetic demo alert: one transaction meets the configured value threshold.", subject_reference: "DEMO-ACC-0217", evidence_row_numbers: [44], evidence_count: 1, measured_values: { amount: 1500000, currency: "PKR", threshold: 1000000 }, interpretation: "Synthetic signal for interface demonstration only." },
+  { alert_id: "DEMO-ALR-78488", rule_id: "ROBUST_AMOUNT_OUTLIER", rule_version: "demo", severity: "medium", status: "needs_review", title: "Account-level amount outlier", explanation: "Synthetic demo alert: an amount is unusually large compared with the imported account baseline.", subject_reference: "DEMO-ACC-1104", evidence_row_numbers: [52], evidence_count: 1, measured_values: { configured_multiplier: 6, baseline: "synthetic" }, interpretation: "Synthetic signal for interface demonstration only." },
+  { alert_id: "DEMO-ALR-78487", rule_id: "DUPLICATE_TRANSACTION_ID", rule_version: "demo", severity: "low", status: "needs_review", title: "Duplicate transaction reference", explanation: "Synthetic demo alert: the same transaction reference appears in multiple rows and should be checked against source-system retry or reversal semantics.", subject_reference: "DEMO-ACC-0590", evidence_row_numbers: [63, 64], evidence_count: 2, measured_values: { row_count: 2 }, interpretation: "Synthetic signal for interface demonstration only." },
+];
+
 function App() {
   const [page, setPage] = useState<PageKey>("overview");
   const [accessTokenState, setAccessTokenState] = useState<string | null>(null);
@@ -333,6 +341,14 @@ function App() {
   const totalMedium = result?.summary.alerts_by_severity.medium || 0;
   const currentNavLabel = navItems.find((item) => item.key === page)?.label || "Overview";
   const visibleAlerts = useMemo(() => result?.alerts || [], [result]);
+  const isDemoPreview = !result;
+  const dashboardAlerts = result ? result.alerts.slice(0, 5) : DEMO_ALERTS;
+  const metricTotalAlerts = result ? result.summary.alert_count : 1248;
+  const metricHighAlerts = result ? result.summary.alerts_by_severity.high || 0 : 126;
+  const metricTransactions = result ? result.summary.total_transactions : 2430000;
+  const metricAccounts = result ? result.summary.unique_source_accounts : 2431;
+  const metricOpenCases = cases.filter((item) => item.status === "open" || item.status === "in_review").length;
+  const metricAverageRisk = result ? Math.min(99, Math.round((metricHighAlerts / Math.max(result.summary.alert_count, 1)) * 100)) : 68;
 
   // Keep SQL credentials in memory only; clear them when leaving the connector workflow.
   useEffect(() => {
@@ -741,70 +757,113 @@ function App() {
           {notice && <NoticeBar notice={notice} onClose={() => setNotice(null)} />}
 
           {page === "overview" && (
-            <>
-              <div className="stats-grid">
-                <StatCard icon={<ArrowLeftRight size={18} />} label="Transactions analyzed" value={result ? compact(result.summary.analyzed_transactions) : "—"} note={result ? `${number(result.summary.excluded_transactions)} excluded for data quality` : "Import data to calculate"} tone="blue" />
-                <StatCard icon={<ShieldAlert size={18} />} label="Review signals" value={result ? number(result.summary.alert_count) : "—"} note={result ? `${totalHigh} high priority · ${totalMedium} medium` : "Evidence-linked rule alerts"} tone="amber" />
-                <StatCard icon={<Users size={18} />} label="Source accounts" value={result ? number(result.summary.unique_source_accounts) : "—"} note={result ? `${number(result.summary.unique_destination_accounts)} destinations mapped` : "Distinct originator accounts"} tone="violet" />
-                <StatCard icon={<Gauge size={18} />} label="Data quality" value={result ? (result.summary.total_transactions ? `${Math.round((result.summary.analyzed_transactions / result.summary.total_transactions) * 100)}%` : "—") : "—"} note={result ? `${number(result.summary.total_transactions)} total rows` : "Valid rows / imported rows"} tone="green" />
+            <section className="command-center">
+              <div className="command-titlebar">
+                <div>
+                  <div className="command-overline"><span className="live-pulse" /> AML COMMAND CENTER</div>
+                  <h2>Risk intelligence overview</h2>
+                  <p>{isDemoPreview ? "Illustrative synthetic telemetry · Upload your data to replace all demo metrics." : `Latest analysis · ${result?.source?.filename || result?.source?.table || "Imported transaction data"}`}</p>
+                </div>
+                <div className="command-title-actions">
+                  <span className={`data-state-pill ${isDemoPreview ? "demo-state" : "live-state"}`}><span />{isDemoPreview ? "SYNTHETIC DEMO" : "ANALYSIS LOADED"}</span>
+                  <button className="btn btn-secondary" onClick={() => { setPage("sources"); setSourceMode("file"); }}><UploadCloud size={15} /> Import data</button>
+                  {result && <button className="btn btn-primary" onClick={exportAlerts}><ArrowDownToLine size={15} /> Export</button>}
+                </div>
               </div>
 
-              {!result ? (
-                <div className="welcome-grid">
-                  <section className="panel start-panel">
-                    <div className="panel-overline"><Sparkles size={15} /> GET STARTED</div>
-                    <h2>Bring your transaction data into SentinelAML</h2>
-                    <p>Start with a transaction export. SentinelAML profiles the dataset, calculates core metrics, and surfaces explainable patterns for a compliance analyst to review.</p>
-                    <div className="source-choice-grid">
-                      <button className="source-choice" onClick={() => { setPage("sources"); setSourceMode("file"); }}>
-                        <div className="choice-icon file-choice-icon"><FileSpreadsheet size={20} /></div>
-                        <span className="choice-title">Upload CSV or Excel</span>
-                        <span className="choice-desc">Preview columns, map fields, and analyze transactions.</span>
-                        <span className="choice-link">Select a file <ArrowRight size={14} /></span>
-                      </button>
-                      <button className="source-choice" onClick={() => { setPage("sources"); setSourceMode("sql"); }}>
-                        <div className="choice-icon db-choice-icon"><Database size={20} /></div>
-                        <span className="choice-title">Connect a database</span>
-                        <span className="choice-desc">Test an approved SQL source and inspect a table sample.</span>
-                        <span className="choice-link">Configure source <ArrowRight size={14} /></span>
-                      </button>
-                    </div>
-                    <div className="privacy-inline"><LockKeyhole size={15} /><span>File contents are processed per request, not saved as a dataset. Use synthetic data until your organization authorizes real data.</span></div>
-                  </section>
-                  <section className="panel workflow-panel">
-                    <div className="panel-heading"><div><h3>Analysis workflow</h3><p>From raw records to reviewed evidence</p></div><span className="panel-small-badge">MVP</span></div>
-                    <div className="workflow-steps">
-                      <WorkflowStep number="01" title="Import source" description="CSV, Excel or approved SQL table" status="current" />
-                      <WorkflowStep number="02" title="Map and validate" description="Confirm date, amount and account columns" />
-                      <WorkflowStep number="03" title="Analyze patterns" description="Profile metrics and configured rule signals" />
-                      <WorkflowStep number="04" title="Review evidence" description="Inspect rows and export analyst findings" />
-                    </div>
-                    <div className="workflow-footer"><ShieldCheck size={17} /><span>Human review stays in control</span></div>
-                  </section>
-                </div>
-              ) : (
-                <div className="dashboard-results-grid">
-                  <section className="panel">
-                    <div className="panel-heading"><div><h3>Alerts requiring review</h3><p>Ordered by rule severity, not a conclusion of wrongdoing.</p></div><button className="text-button" onClick={() => setPage("alerts")}>View all <ArrowRight size={14} /></button></div>
-                    <AlertsTable alerts={visibleAlerts.slice(0, 8)} onInspect={setSelectedAlert} />
-                  </section>
-                  <section className="panel currency-panel">
-                    <div className="panel-heading"><div><h3>Volume by currency</h3><p>Totals are kept separate by currency.</p></div><ArrowLeftRight size={17} className="muted-icon" /></div>
-                    {result.totals_by_currency.map((item) => (
-                      <div className="currency-row" key={item.currency}>
-                        <div className="currency-avatar">{item.currency === "UNSPECIFIED" ? "?" : item.currency.slice(0, 3)}</div>
-                        <div className="currency-main"><strong>{item.currency}</strong><span>{number(item.transaction_count)} transactions</span></div>
-                        <div className="currency-number"><strong>{number(item.total_amount)}</strong><span>Average {number(item.average_amount)}</span></div>
-                      </div>
-                    ))}
-                    {result.summary.date_range && <div className="date-range-note"><Clock3 size={15} />{dateLabel(result.summary.date_range.start)} – {dateLabel(result.summary.date_range.end)}</div>}
-                    <div className="caveat-box"><ShieldCheck size={16} /><p>Signals identify patterns that need context. They do not establish criminality or initiate account actions.</p></div>
-                  </section>
-                  {result.warnings.length > 0 && <section className="panel warning-panel"><div className="panel-heading"><div><h3>Analysis notes</h3><p>Read before interpreting this run</p></div></div>{result.warnings.map((warning, index) => <div className="warning-line" key={index}><CircleHelp size={15} />{warning}</div>)}</section>}
-                </div>
-              )}
-              <div className="bottom-meta"><span><span className="meta-dot green-dot" /> Local analysis workspace</span><span><LockKeyhole size={13} /> Prototype — not production approved</span><button onClick={() => setNotice({ kind: "info", text: "Read docs/SECURITY.md in the GitHub repository before connecting any real financial data." })}>Security guidance <ArrowRight size={13} /></button></div>
-            </>
+              <div className="command-kpis">
+                <MetricCard icon={<ShieldAlert size={17} />} label="Total alerts" value={number(metricTotalAlerts)} note={result ? "Current analysis run" : "Demo-only example"} tone="teal" trend={result ? `${number(metricHighAlerts)} high priority` : "+18.6% vs previous period"} points={[12, 18, 15, 24, 20, 31, 36, 42]} />
+                <MetricCard icon={<Activity size={17} />} label="High-risk alerts" value={number(metricHighAlerts)} note={result ? "Require analyst review" : "Illustrative sample"} tone="red" trend={result ? "Heuristic signal count" : "+2.4% vs previous period"} points={[28, 23, 33, 29, 41, 37, 49, 54]} />
+                <MetricCard icon={<ListChecks size={17} />} label="Open investigations" value={number(metricOpenCases || (isDemoPreview ? 32 : 0))} note={isDemoPreview && !cases.length ? "Synthetic placeholder" : "Persisted case records"} tone="blue" trend={`${number(cases.filter((item) => item.status === "escalated").length)} escalated`} points={[10, 14, 13, 18, 16, 23, 20, 26]} />
+                <MetricCard icon={<ArrowLeftRight size={17} />} label="Transactions analyzed" value={compact(metricTransactions)} note={result ? `${number(result.summary.analyzed_transactions)} valid rows` : "Synthetic example volume"} tone="green" trend={result ? `${number(result.summary.excluded_transactions)} excluded` : "Illustrative only"} points={[18, 20, 18, 30, 28, 35, 32, 43]} />
+                <MetricCard icon={<Gauge size={17} />} label="Risk index" value={number(metricAverageRisk)} note={result ? "High-alert share index" : "Illustrative synthetic score"} tone="violet" trend={isDemoPreview ? "Demo score only" : "Not a probability of crime"} points={[16, 22, 20, 18, 28, 30, 26, 37]} />
+              </div>
+
+              <div className="command-grid command-grid-top">
+                <section className="command-panel map-panel">
+                  <div className="command-panel-heading"><div><h3>Exposure activity map</h3><p>{isDemoPreview ? "Illustrative markers · not real geographic or customer data" : "Geography is only available if your imported dataset contains it"}</p></div><span className="panel-tag">OVERVIEW</span></div>
+                  <div className="map-panel-body"><div className="map-glow" /><MiniWorldMap /><div className="map-legend"><span><i className="legend-dot high-dot" /> High</span><span><i className="legend-dot medium-dot" /> Medium</span><span><i className="legend-dot low-dot" /> Low</span></div></div>
+                  <div className="map-footer"><span><span className="status-dot" /> {isDemoPreview ? "Synthetic preview active" : `${number(result?.summary.unique_source_accounts)} source accounts in analysis`}</span><span>{isDemoPreview ? "No live feeds connected" : "No live feed connected"}</span></div>
+                </section>
+
+                <section className="command-panel risk-level-panel">
+                  <div className="command-panel-heading"><div><h3>Alerts by risk level</h3><p>Rule severity distribution</p></div><button className="ghost-icon" onClick={() => setPage("alerts")} aria-label="Open alerts"><ArrowRight size={15} /></button></div>
+                  <div className="donut-layout"><MiniDonut high={result ? result.summary.alerts_by_severity.high || 0 : 126} medium={result ? result.summary.alerts_by_severity.medium || 0 : 398} low={result ? result.summary.alerts_by_severity.low || 0 : 724} /><div className="donut-legend">
+                    <div><span><i className="legend-dot high-dot" />High priority</span><strong>{number(result ? result.summary.alerts_by_severity.high || 0 : 126)}</strong></div>
+                    <div><span><i className="legend-dot medium-dot" />Medium priority</span><strong>{number(result ? result.summary.alerts_by_severity.medium || 0 : 398)}</strong></div>
+                    <div><span><i className="legend-dot low-dot" />Low priority</span><strong>{number(result ? result.summary.alerts_by_severity.low || 0 : 724)}</strong></div>
+                  </div></div>
+                  <div className="panel-footnote">{isDemoPreview ? "Sample values are fabricated for UI preview." : "Severity indicates configured review priority, not criminal intent."}</div>
+                </section>
+
+                <section className="command-panel countries-panel">
+                  <div className="command-panel-heading"><div><h3>{isDemoPreview ? "Illustrative risk regions" : "Geographic risk signals"}</h3><p>{isDemoPreview ? "Synthetic demo-only sample" : "Country field not inferred without source data"}</p></div><span className="panel-tag">REGIONS</span></div>
+                  {isDemoPreview ? [
+                    ["Region Alpha", 78, "high"], ["Region Bravo", 64, "high"], ["Region Charlie", 52, "medium"], ["Region Delta", 48, "medium"], ["Region Echo", 35, "low"]
+                  ].map(([name, count, risk]) => <div className="country-line" key={String(name)}><span className="country-name">{name}</span><div className="country-track"><span className={`country-bar ${risk === "high" ? "bar-high" : risk === "medium" ? "bar-medium" : "bar-low"}`} style={{ width: `${Number(count) / 80 * 100}%` }} /></div><strong>{count}</strong><span className={`mini-risk ${String(risk)}`}>{risk}</span></div>) : <div className="panel-empty-note"><Network size={22} /><span>Import a country or channel field to enrich geographic analysis. No locations are invented for your dataset.</span></div>}
+                  <button className="panel-link" onClick={() => setPage("sources")}>{isDemoPreview ? "Replace demo with my data" : "Review source mappings"} <ArrowRight size={13} /></button>
+                </section>
+              </div>
+
+              <div className="command-grid command-grid-middle">
+                <section className="command-panel recent-alerts-panel">
+                  <div className="command-panel-heading"><div><h3>Recent risk signals</h3><p>{isDemoPreview ? "Synthetic rows for visual demonstration" : "Signals generated from the current analysis"}</p></div><button className="panel-link inline-link" onClick={() => setPage("alerts")}>View all <ArrowRight size={13} /></button></div>
+                  <div className="recent-alert-list">
+                    {dashboardAlerts.slice(0, 5).map((alert) => <button className="recent-alert-row" key={alert.alert_id} onClick={() => setSelectedAlert(alert)}>
+                      <span className={`alert-symbol ${alert.severity}`}><ShieldAlert size={14} /></span>
+                      <span className="recent-alert-copy"><strong>{alert.title}</strong><small>{alert.alert_id} · {ruleLabel(alert.rule_id)}</small></span>
+                      <span className={`severity-pill ${severityClass(alert.severity)}`}><span />{alert.severity}</span>
+                      <ArrowRight className="recent-row-arrow" size={14} />
+                    </button>)}
+                    {!dashboardAlerts.length && <div className="panel-empty-note"><ShieldCheck size={22} /><span>No alerts were generated in this analysis run.</span></div>}
+                  </div>
+                  {isDemoPreview && <div className="demo-footnote"><CircleHelp size={13} /> Demo alerts are fabricated and cannot be opened as persisted cases.</div>}
+                </section>
+
+                <section className="command-panel transaction-panel">
+                  <div className="command-panel-heading"><div><h3>Transaction monitoring</h3><p>{result ? "Top signals from the current run" : "Illustrative synthetic activity feed"}</p></div><span className="feed-indicator"><i /> {result ? "Analysis result" : "Demo feed"}</span></div>
+                  <div className="compact-table-wrap"><table className="compact-table"><thead><tr><th>Signal</th><th>Account ref.</th><th>Value</th><th>Risk</th></tr></thead><tbody>
+                    {dashboardAlerts.slice(0, 5).map((alert) => <tr key={alert.alert_id} onClick={() => setSelectedAlert(alert)}><td><span className="mono-id">{alert.alert_id}</span><small>{ruleLabel(alert.rule_id)}</small></td><td>{alert.subject_reference || "Not available"}</td><td>{alert.measured_values.currency ? `${String(alert.measured_values.currency)} ${number(Number(alert.measured_values.amount))}` : (alert.measured_values.transaction_count ? `${number(Number(alert.measured_values.transaction_count))} events` : "Review")}</td><td><span className={`severity-pill ${severityClass(alert.severity)}`}><span />{alert.severity}</span></td></tr>)}
+                    {!dashboardAlerts.length && <tr><td colSpan={4}>No transaction signals in this run.</td></tr>}
+                  </tbody></table></div>
+                  <button className="panel-link panel-link-bottom" onClick={() => setPage("alerts")}>Open signal explorer <ArrowRight size={13} /></button>
+                </section>
+
+                <section className="command-panel ai-panel">
+                  <div className="command-panel-heading"><div><h3>AI risk intelligence</h3><p>Evidence-first investigation assistant</p></div><span className="ai-status"><Sparkles size={13} /> {result ? "Ready" : "Preview"}</span></div>
+                  <div className="ai-insight-art"><div className="ai-orbit orbit-one" /><div className="ai-orbit orbit-two" /><div className="ai-core"><Sparkles size={23} /></div></div>
+                  <div className="ai-insight-title">{result ? (dashboardAlerts[0]?.title || "No leading alert") : "Structuring-pattern review"}</div>
+                  <p className="ai-insight-copy">{result ? (dashboardAlerts[0]?.explanation || "This run did not create any review signals.") : "Demo insight: a near-threshold pattern needs context. The real workflow uses your alert evidence and approved policy excerpts."}</p>
+                  <div className="confidence-row"><span>Evidence linkage</span><strong>{result ? (dashboardAlerts[0] ? "Available" : "Not applicable") : "Illustrative"}</strong></div>
+                  <div className="confidence-track"><span style={{ width: result && dashboardAlerts.length ? "82%" : "58%" }} /></div>
+                  <button className="ai-action" onClick={() => { if (result && dashboardAlerts[0]) void openCaseFromAlert(dashboardAlerts[0]); else setPage("sources"); }} disabled={caseBusy}>{result && dashboardAlerts[0] ? "Open investigation case" : "Analyze my dataset"} <ArrowRight size={13} /></button>
+                </section>
+              </div>
+
+              <div className="command-grid command-grid-bottom">
+                <section className="command-panel bottom-chart-panel">
+                  <div className="command-panel-heading"><div><h3>Customer risk distribution</h3><p>{isDemoPreview ? "Illustrative synthetic scoring" : "Risk scoring model not configured"}</p></div><Users size={16} className="muted-icon" /></div>
+                  <div className="customer-risk-body"><div className="customer-ring"><div><strong>{number(metricAccounts)}</strong><span>Accounts</span></div></div><div className="customer-legend"><span><i className="legend-dot high-dot" />High risk <b>{isDemoPreview ? "312" : number(metricHighAlerts)}</b></span><span><i className="legend-dot medium-dot" />Medium <b>{isDemoPreview ? "1,024" : "—"}</b></span><span><i className="legend-dot low-dot" />Low <b>{isDemoPreview ? "1,095" : "—"}</b></span></div></div>
+                </section>
+                <section className="command-panel bottom-chart-panel">
+                  <div className="command-panel-heading"><div><h3>Risk signal trend</h3><p>{isDemoPreview ? "Sample activity curve" : "Historical time series not stored in this run"}</p></div><Activity size={16} className="muted-icon" /></div>
+                  <div className="trend-value"><strong>{number(metricAverageRisk)}</strong><span>Risk index</span></div><Sparkline values={[16, 22, 20, 18, 29, 26, 31, 27, 39, 34, 45, 49]} color="#2dd4bf" height={74} /><div className="axis-labels"><span>Earlier</span><span>Recent</span></div>
+                </section>
+                <section className="command-panel bottom-chart-panel">
+                  <div className="command-panel-heading"><div><h3>Compliance knowledge</h3><p>Approved policy library status</p></div><BookOpenText size={16} className="muted-icon" /></div>
+                  <div className="compliance-meter-list"><div><span>Policy documents indexed</span><strong>{number(policyDocs.length)}</strong></div><div className="meter-track"><span style={{ width: policyDocs.length ? "100%" : "4%" }} /></div><div><span>Policy retrieval</span><strong>{policyDocs.length ? "Available" : "Not configured"}</strong></div><div className="meter-track"><span style={{ width: policyDocs.length ? "76%" : "4%" }} /></div><div><span>Human approval</span><strong>Required</strong></div><div className="meter-track"><span style={{ width: "100%" }} /></div></div>
+                  <button className="panel-link panel-link-bottom" onClick={() => setPage("policies")}>Open policy library <ArrowRight size={13} /></button>
+                </section>
+                <section className="command-panel bottom-chart-panel">
+                  <div className="command-panel-heading"><div><h3>Watchlist screening</h3><p>{isDemoPreview ? "Illustrative sample only" : "External lists are not integrated"}</p></div><Fingerprint size={16} className="muted-icon" /></div>
+                  <div className="watchlist-number">{isDemoPreview ? "24" : "—"}<span>{isDemoPreview ? "synthetic hits" : "not connected"}</span></div>
+                  <div className="bar-chart">{[24, 40, 32, 46, 59, 36, 18].map((height, index) => <div className="bar-column" key={index}><span style={{ height: `${height}%` }} /><small>{["M", "T", "W", "T", "F", "S", "S"][index]}</small></div>)}</div>
+                  <div className="panel-footnote">No external sanctions or PEP screening is performed in this MVP.</div>
+                </section>
+              </div>
+
+              <div className="command-disclaimer"><ShieldCheck size={15} /><span>SentinelAML is an analyst-assistance prototype. Alerts are heuristic review indicators, not determinations of criminality. Demo metrics and map markers are synthetic and are never presented as bank telemetry.</span></div>
+            </section>
           )}
 
           {page === "sources" && (
