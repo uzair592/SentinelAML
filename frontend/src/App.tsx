@@ -1061,17 +1061,6 @@ function App() {
             </section>
           )}
 
-          {page === "investigations" && (
-            <div className="investigation-layout">
-              <section className="panel full-panel">
-                <div className="panel-heading"><div><h3>Investigation workspace</h3><p>Prepare review-ready cases from evidence. Case persistence and AI orchestration are planned next.</p></div><span className="future-badge"><Sparkles size={13} /> Next milestone</span></div>
-                <div className="investigation-hero"><div className="investigation-art"><Network size={36} strokeWidth={1.35} /><span /><i /><b /></div><div><h2>From rule signal to evidence-backed case</h2><p>Next we will add transaction timelines, linked-account exploration, sourced investigation summaries, analyst notes, and supervisor approval. Consequential actions will remain human-controlled.</p><button className="btn btn-secondary" onClick={() => setPage("alerts")}>Review current alerts <ArrowRight size={15} /></button></div></div>
-                {result ? <div className="panel-heading recent-case-heading"><div><h3>Potential cases from current run</h3><p>These are alerts only — no case has been opened automatically.</p></div></div> : null}
-                {result ? <AlertsTable alerts={visibleAlerts.slice(0, 10)} onInspect={setSelectedAlert} /> : null}
-              </section>
-            </div>
-          )}
-
           <footer className="page-footer">
             <span>© 2026 SentinelAML <span className="footer-divider">·</span> Early-stage prototype</span>
             <span><ShieldCheck size={14} /> Explainable signals. Human-led decisions.</span>
