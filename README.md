@@ -38,7 +38,7 @@ python -m venv .venv
 # Windows PowerShell: .venv\Scripts\Activate.ps1
 # macOS/Linux: source .venv/bin/activate
 python -m pip install -r requirements.txt
-# Copy .env.example to .env; the default CORS origin is http://127.0.0.1:5173
+# Windows PowerShell: Copy-Item .env.example .env\n# macOS/Linux: cp .env.example .env
 uvicorn app.main:app --reload --env-file .env --host 127.0.0.1 --port 8000
 ```
 
