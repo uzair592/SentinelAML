@@ -301,6 +301,7 @@ function App() {
   const [loginEmail, setLoginEmail] = useState("sentinel.admin@sentinelaml.local");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginBusy, setLoginBusy] = useState(false);
+  const [loginError, setLoginError] = useState("");
   const [cases, setCases] = useState<CaseItem[]>([]);
   const [selectedCase, setSelectedCase] = useState<CaseItem | null>(null);
   const [caseQuestion, setCaseQuestion] = useState("");
@@ -345,6 +346,167 @@ function App() {
       setSelectedSchema(null);
     }
   }, [page, sourceMode]);
+
+  useEffect(() => {
+    if (!accessTokenState) return;
+    const loadPageData = async () => {
+      try {
+        if (page === "cases" || page === "investigations") {
+          const data = await apiRequest("/api/cases") as { cases: CaseItem[] };
+          setCases(data.cases);
+          if (selectedCase) {
+            const refreshed = data.cases.find((item) => item.id === selectedCase.id);
+            if (refreshed) setSelectedCase(refreshed);
+          }
+        }
+        if (page === "policies") {
+          const data = await apiRequest("/api/policies") as { documents: PolicyDoc[] };
+          setPolicyDocs(data.documents);
+        }
+        if (page === "audit") {
+          const data = await apiRequest("/api/audit") as { events: Record<string, unknown>[] };
+          setAuditEvents(data.events);
+        }
+      } catch (error) {
+        setNotice({ kind: "error", text: error instanceof Error ? error.message : "Could not load workspace records." });
+      }
+    };
+    void loadPageData();
+  }, [page, accessTokenState]);
+
+  const signIn = async () => {
+    setLoginBusy(true);
+    setLoginError("");
+    try {
+      const data = await apiRequest("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: loginEmail, password: loginPassword }),
+      }) as { access_token: string; user: CurrentUser };
+      accessToken = data.access_token;
+      setAccessTokenState(data.access_token);
+      setCurrentUser(data.user);
+      setLoginPassword("");
+      setNotice({ kind: "success", text: `Signed in as ${data.user.display_name}.` });
+    } catch (error) {
+      setLoginError(error instanceof Error ? error.message : "Sign in failed.");
+    } finally {
+      setLoginBusy(false);
+    }
+  };
+
+  const signOut = () => {
+    accessToken = null;
+    setAccessTokenState(null);
+    setCurrentUser(null);
+    setResult(null);
+    setPreview(null);
+    setFile(null);
+    setCases([]);
+    setSelectedCase(null);
+    setPage("overview");
+    setNotice(null);
+  };
+
+  const openCaseFromAlert = async (alert: AlertItem) => {
+    if (!result?.analysis_run_id) {
+      setNotice({ kind: "info", text: "Upload and analyze a dataset before creating a persistent investigation case." });
+      return;
+    }
+    setCaseBusy(true);
+    try {
+      const created = await apiRequest("/api/cases", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ analysis_run_id: result.analysis_run_id, alert_id: alert.alert_id }),
+      }) as CaseItem;
+      setSelectedCase(created);
+      const data = await apiRequest("/api/cases") as { cases: CaseItem[] };
+      setCases(data.cases);
+      setPage("investigations");
+      setNotice({ kind: "success", text: `Investigation case ${created.case_reference} created and saved.` });
+    } catch (error) {
+      setNotice({ kind: "error", text: error instanceof Error ? error.message : "Could not create case." });
+    } finally {
+      setCaseBusy(false);
+    }
+  };
+
+  const generateInvestigation = async () => {
+    if (!selectedCase) return;
+    setCaseBusy(true);
+    try {
+      const data = await apiRequest(`/api/cases/${selectedCase.id}/investigate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: caseQuestion || null }),
+      }) as { case: CaseItem; workflow: Record<string, any> };
+      setSelectedCase(data.case);
+      setCases((items) => items.map((item) => item.id === data.case.id ? data.case : item));
+      setNotice({ kind: "success", text: "Multi-agent investigation draft generated with evidence notes and policy citations for analyst review." });
+    } catch (error) {
+      setNotice({ kind: "error", text: error instanceof Error ? error.message : "Investigation workflow failed." });
+    } finally {
+      setCaseBusy(false);
+    }
+  };
+
+  const changeCaseStatus = async (caseItem: CaseItem, status: string, disposition?: string) => {
+    setCaseBusy(true);
+    try {
+      const updated = await apiRequest(`/api/cases/${caseItem.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status, ...(disposition ? { disposition } : {}) }),
+      }) as CaseItem;
+      setCases((items) => items.map((item) => item.id === updated.id ? updated : item));
+      if (selectedCase?.id === updated.id) setSelectedCase(updated);
+      setNotice({ kind: "success", text: `Case ${updated.case_reference} updated to ${status.replaceAll("_", " ")}.` });
+    } catch (error) {
+      setNotice({ kind: "error", text: error instanceof Error ? error.message : "Could not update case." });
+    } finally {
+      setCaseBusy(false);
+    }
+  };
+
+  const uploadPolicy = async (selected: File | null) => {
+    if (!selected) return;
+    setCaseBusy(true);
+    setNotice(null);
+    try {
+      const form = new FormData();
+      form.append("file", selected);
+      const data = await apiRequest("/api/policies/upload", { method: "POST", body: form }) as { title: string; chunk_count: number };
+      const listed = await apiRequest("/api/policies") as { documents: PolicyDoc[] };
+      setPolicyDocs(listed.documents);
+      setNotice({ kind: "success", text: `Policy document “${data.title}” indexed into ${data.chunk_count} searchable passages.` });
+    } catch (error) {
+      setNotice({ kind: "error", text: error instanceof Error ? error.message : "Policy upload failed." });
+    } finally {
+      setCaseBusy(false);
+    }
+  };
+
+  const searchPolicies = async () => {
+    if (policyQuery.trim().length < 3) {
+      setNotice({ kind: "error", text: "Enter at least three characters to search the policy library." });
+      return;
+    }
+    setCaseBusy(true);
+    try {
+      const data = await apiRequest("/api/policies/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: policyQuery, limit: 8 }),
+      }) as { results: PolicyResult[] };
+      setPolicyResults(data.results);
+      setNotice({ kind: "info", text: `${data.results.length} matching passage(s) found using lexical search. Verify the original document and its current version.` });
+    } catch (error) {
+      setNotice({ kind: "error", text: error instanceof Error ? error.message : "Policy search failed." });
+    } finally {
+      setCaseBusy(false);
+    }
+  };
 
   const chooseFile = (selected: File | null) => {
     setFile(selected);
