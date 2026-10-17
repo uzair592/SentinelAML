@@ -157,8 +157,9 @@ def jwt_secret() -> str:
     environment = os.getenv("SENTINELAML_ENV", "development").lower()
     secret = os.getenv("SENTINELAML_JWT_SECRET", "")
     if environment == "production":
-        if len(secret) < 32:
-            raise RuntimeError("Production requires SENTINELAML_JWT_SECRET with at least 32 characters.")
+        lowered = secret.lower()
+        if len(secret) < 32 or any(marker in lowered for marker in ("replace-with", "change-me", "development-only", "unsafe-secret")):
+            raise RuntimeError("Production requires a randomly generated SENTINELAML_JWT_SECRET of at least 32 characters; example secrets are rejected.")
         return secret
     return secret or "local-development-only-change-before-deployment-unsafe-secret"
 
@@ -167,8 +168,15 @@ def init_db() -> None:
     environment = os.getenv("SENTINELAML_ENV", "development").lower()
     email = os.getenv("SENTINELAML_ADMIN_EMAIL", "").strip().lower()
     password = os.getenv("SENTINELAML_ADMIN_PASSWORD", "")
-    if environment == "production" and (not email or len(password) < 14):
-        raise RuntimeError("Production startup requires SENTINELAML_ADMIN_EMAIL and SENTINELAML_ADMIN_PASSWORD (minimum 14 characters).")
+    if environment == "production" and (
+        not email
+        or len(password) < 14
+        or email == "sentinel.admin@example.com"
+        or password == "ChangeThis-LocalOnly-123!"
+    ):
+        raise RuntimeError("Production startup requires a non-example SENTINELAML_ADMIN_EMAIL and a strong, non-example SENTINELAML_ADMIN_PASSWORD of at least 14 characters.")
+    if environment == "production":
+        jwt_secret()
     Base.metadata.create_all(engine)
     with SessionLocal() as db:
         first_user = db.scalar(select(User.id).limit(1))
