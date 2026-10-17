@@ -2,26 +2,26 @@
 
 ## Milestone 0 — Foundation and blueprint
 - [x] Establish product goal, constraints, architecture, flow diagram, ERD, rules, security model, and API contract.
-- [ ] Add repository conventions, local setup, environment examples, and CI.
+- [x] Add repository conventions, local setup, environment examples, and CI.
 
 ## Milestone 1 — Ingestion-first working prototype
-- [ ] React portal with navigation, overview dashboard and data-source workflow.
-- [ ] CSV/XLSX preview, file validation, sheet selection and column mapping.
-- [ ] Shared canonical schema and validation reports.
-- [ ] Deterministic KPIs and currency-separated totals.
-- [ ] Initial explainable rules with exact evidence row references.
-- [ ] Basic results table, filters, and safe CSV/JSON export.
-- [ ] Unit tests and synthetic sample data.
+- [x] React portal with navigation, overview dashboard and data-source workflow.
+- [x] CSV/XLSX preview, file validation, sheet selection and column mapping.
+- [x] Shared canonical schema and validation reports.
+- [x] Deterministic KPIs and currency-separated totals.
+- [x] Initial explainable rules with exact evidence row references.
+- [x] Results table with alert detail panels and CSV export.\n- [ ] Add alert search/severity filters and JSON export.
+- [x] Unit tests and synthetic sample data.
 
 **Acceptance:** User can choose a sample/own CSV or XLSX, review the inferred columns, map required fields, run analysis, and see repeatable KPIs and evidence-backed alerts.
 
 ## Milestone 2 — SQL connector
-- [ ] Select supported database engine.
-- [ ] Request-scoped credentials and secure form behavior.
-- [ ] Host allowlisting, timeouts and driver validation.
-- [ ] Test connection and list accessible tables.
-- [ ] Preview columns and capped row sample.
-- [ ] Map fields and analyze with the same engine.
+- [x] Select supported database engine.
+- [x] Request-scoped credentials and secure form behavior.
+- [x] Host allowlisting, connection timeouts and driver validation.\n- [ ] Add database-specific statement timeouts and stronger TLS configuration.
+- [x] Test connection and list accessible tables.
+- [x] Preview columns and capped row sample.
+- [x] Map fields and analyze with the same engine.
 - [ ] Tests for disallowed hosts, drivers, paths, missing tables, and timeout failures.
 
 **Acceptance:** A dedicated read-only SQL account can be tested against an approved development source; table import is bounded and no credentials are persisted or logged.
