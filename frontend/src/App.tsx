@@ -743,7 +743,7 @@ function App() {
         </header>
 
         <div className="page-content">
-          <div className="page-heading">
+          <div className={page === "overview" ? "page-heading dashboard-page-heading" : "page-heading"}>
             <div>
               <div className="eyebrow"><span className="eyebrow-dot" /> FINANCIAL CRIME INTELLIGENCE</div>
               <h1>{page === "overview" ? "Risk overview" : currentNavLabel}</h1>
