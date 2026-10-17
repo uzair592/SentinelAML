@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   Activity, ArrowDownToLine, ArrowLeftRight, ArrowRight, Bell, BookOpenText,
   Building2, Check, ChevronDown, CircleHelp, Clock3, Database, FileSpreadsheet, FileUp,
-  Filter, Fingerprint, Gauge, LayoutDashboard, ListChecks, LockKeyhole, Menu, Network,
+  Fingerprint, Gauge, LayoutDashboard, ListChecks, LockKeyhole, Menu, Network,
   RefreshCw, Search, ShieldAlert, ShieldCheck, SlidersHorizontal, Sparkles, UploadCloud,
   Users, X, Zap,
 } from "lucide-react";
