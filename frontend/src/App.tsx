@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
-  Activity, ArrowDownToLine, ArrowLeftRight, ArrowRight, Bell, BookOpenText,
+  Activity, ArrowDownToLine, ArrowLeftRight, ArrowRight, BadgeCheck, Bell, BookOpenText,
   Building2, Check, ChevronDown, CircleHelp, Clock3, Database, FileSpreadsheet, FileUp,
   Fingerprint, Gauge, LayoutDashboard, ListChecks, LockKeyhole, LogOut, Menu, Network,
   RefreshCw, Search, ShieldAlert, ShieldCheck, SlidersHorizontal, Sparkles, UploadCloud,
@@ -1082,6 +1082,17 @@ function App() {
       {selectedAlert && <AlertDrawer alert={selectedAlert} onClose={() => setSelectedAlert(null)} onCreateCase={(alert) => { setSelectedAlert(null); void openCaseFromAlert(alert); }} canCreateCase={Boolean(result?.analysis_run_id)} caseBusy={caseBusy} />}
     </div>
   );
+}
+
+function MetricCard({ icon, label, value, note, tone, trend, points }: {
+  icon: ReactNode; label: string; value: string; note: string; tone: string; trend: string; points: number[];
+}) {
+  const lineColor = tone === "red" ? "#fb7185" : tone === "blue" ? "#60a5fa" : tone === "green" ? "#2dd4bf" : tone === "violet" ? "#c084fc" : "#2dd4bf";
+  return <section className="metric-card">
+    <div className="metric-card-top"><span className={`metric-icon metric-icon-${tone}`}>{icon}</span><span className="metric-label">{label}</span><span className="metric-more">•••</span></div>
+    <div className="metric-main-row"><strong>{value}</strong><Sparkline values={points} color={lineColor} height={38} /></div>
+    <div className="metric-note"><span>{note}</span><small>{trend}</small></div>
+  </section>;
 }
 
 function StatCard({ icon, label, value, note, tone }: { icon: ReactNode; label: string; value: string; note: string; tone: string }) {
