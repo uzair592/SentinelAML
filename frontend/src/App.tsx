@@ -473,6 +473,7 @@ function App() {
               <p>{page === "overview" ? "Turn transaction data into explainable signals for analyst review." : page === "sources" ? "Import transaction records or securely inspect an approved SQL source." : page === "alerts" ? "Review rule-triggered signals and inspect the underlying evidence." : page === "quality" ? "Understand missing, invalid, or inconsistent transaction data." : "Case orchestration and human approvals are part of the next milestone."}</p>
             </div>
             <div className="heading-actions">
+              {result && <button className="btn btn-secondary" onClick={resetWorkspace}><RefreshCw size={16} /> Clear run</button>}
               {result && <button className="btn btn-secondary" onClick={exportAlerts}><ArrowDownToLine size={16} /> Export alerts</button>}
               <button className="btn btn-primary" onClick={() => { setPage("sources"); setSourceMode("file"); }}><UploadCloud size={16} /> Import data</button>
             </div>
