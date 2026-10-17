@@ -21,7 +21,7 @@ app = FastAPI(
     version="0.1.0",
 )
 
-origins = [item.strip() for item in os.getenv("SENTINELAML_CORS_ORIGINS", "http://localhost:5173").split(",") if item.strip()]
+origins = [item.strip() for item in os.getenv("SENTINELAML_CORS_ORIGINS", "http://127.0.0.1:5173").split(",") if item.strip()]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
