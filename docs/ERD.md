@@ -192,6 +192,7 @@ erDiagram
 
 ## Entity notes and constraints
 
+- This ERD documents the target tenant-aware model. The current prototype implements the core user, analysis run, case, case-event, policy document/chunk, and audit-event entities; the `ORGANIZATION` tenant table and full `organization_id` isolation are planned and are not implemented yet.
 - `organization_id` belongs on every tenant-owned record; production queries must scope by the authenticated tenant.
 - Database passwords, full secret-bearing connection URLs, access tokens, and raw private keys must never be persisted in `DATA_SOURCE`.
 - `host_reference` should identify an administrator-approved host entry, not be a free-form secret connection string.
