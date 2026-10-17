@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 
-DEMO_EMAIL = "sentinel.admin@sentinelaml.local"
+DEMO_EMAIL = "sentinel.admin@example.com"
 DEMO_PASSWORD = "ChangeThis-LocalOnly-123!"
 
 
