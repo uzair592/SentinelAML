@@ -87,7 +87,7 @@ def _canonicalize(frame: pd.DataFrame, mapping: dict[str, str | None]) -> tuple[
     original_time = out["timestamp"].copy()
     original_amount = out["amount"].copy()
     out["timestamp"] = pd.to_datetime(out["timestamp"], errors="coerce", utc=True, format="mixed")
-    out["amount"] = pd.to_numeric(out["amount"].str.replace(",", "", regex=False).str.replace(r"^[^0-9+\-\.]", "", regex=True), errors="coerce")
+    out["amount"] = pd.to_numeric(out["amount"].str.replace(",", "", regex=False), errors="coerce")
     out["source_account"] = out["source_account"].replace("", pd.NA)
     # Empty optional identifiers stay empty strings for stable JSON output.
     for col in ("destination_account", "customer_id", "transaction_id", "currency", "transaction_type", "channel", "status", "country"):
