@@ -229,6 +229,71 @@ function AlertsTable({ alerts, onInspect }: { alerts: AlertItem[]; onInspect: (a
   );
 }
 
+function Sparkline({ values, color = "#2dd4bf", height = 42 }: { values: number[]; color?: string; height?: number }) {
+  const max = Math.max(...values, 1);
+  const min = Math.min(...values, 0);
+  const points = values.map((value, index) => {
+    const x = values.length < 2 ? 50 : (index / (values.length - 1)) * 180;
+    const y = 34 - ((value - min) / Math.max(1, max - min)) * 28;
+    return `${x},${y}`;
+  }).join(" ");
+  return <svg className="sparkline" viewBox="0 0 180 42" preserveAspectRatio="none" style={{ height }} aria-hidden="true">
+    <polyline points={points} fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>;
+}
+
+function MiniDonut({ high, medium, low }: { high: number; medium: number; low: number }) {
+  const total = Math.max(1, high + medium + low);
+  const highEnd = high / total * 100;
+  const mediumEnd = highEnd + medium / total * 100;
+  return <div className="donut-visual" style={{ background: `conic-gradient(#fb7185 0 ${highEnd}%, #fbbf24 ${highEnd}% ${mediumEnd}%, #2dd4bf ${mediumEnd}% 100%)` }}>
+    <div className="donut-hole"><strong>{number(total)}</strong><span>Total alerts</span></div>
+  </div>;
+}
+
+function MiniWorldMap() {
+  const dots = Array.from({ length: 210 }, (_, i) => {
+    const row = Math.floor(i / 21);
+    const column = i % 21;
+    const cx = 12 + column * 8.3;
+    const cy = 10 + row * 8.1;
+    const land = (column >= 1 && column <= 7 && row >= 1 && row <= 5 && !(column < 3 && row > 3))
+      || (column >= 7 && column <= 10 && row >= 2 && row <= 7)
+      || (column >= 11 && column <= 19 && row >= 1 && row <= 5 && !(column > 16 && row > 3))
+      || (column >= 15 && column <= 19 && row >= 6 && row <= 8);
+    if (!land) return null;
+    const highlight = [28, 54, 90, 126, 157].includes(i);
+    return <circle key={i} cx={cx} cy={cy} r={highlight ? 2.5 : 1.1} fill={highlight ? "#2dd4bf" : "#254a64"} opacity={highlight ? 1 : .7} />;
+  });
+  return <svg className="world-map" viewBox="0 0 190 105" role="img" aria-label="Illustrative dot map with synthetic activity markers">{dots}
+    <circle cx="40" cy="30" r="10" fill="#2dd4bf" opacity=".08" /><circle cx="40" cy="30" r="4" fill="#2dd4bf" opacity=".6" />
+    <circle cx="111" cy="45" r="11" fill="#2dd4bf" opacity=".08" /><circle cx="111" cy="45" r="4" fill="#2dd4bf" opacity=".65" />
+    <circle cx="147" cy="53" r="10" fill="#2dd4bf" opacity=".08" /><circle cx="147" cy="53" r="3.5" fill="#2dd4bf" opacity=".6" />
+  </svg>;
+}
+
+function LoginScreen({ email, password, setEmail, setPassword, onSubmit, busy, error }: {
+  email: string; password: string; setEmail: (value: string) => void; setPassword: (value: string) => void;
+  onSubmit: () => void; busy: boolean; error: string;
+}) {
+  return <div className="login-shell">
+    <div className="login-ambient login-ambient-one" /><div className="login-ambient login-ambient-two" />
+    <section className="login-card">
+      <div className="brand-lockup login-brand"><div className="brand-mark"><Fingerprint size={23} /></div><div><div className="brand-name">Sentinel<span>AML</span></div><div className="brand-subtitle">RISK INTELLIGENCE</div></div></div>
+      <div className="login-overline"><ShieldCheck size={15} /> SECURE ANALYST WORKSPACE</div>
+      <h1>Welcome back.</h1><p className="login-intro">Sign in to investigate financial crime signals, review evidence and explore approved compliance policies.</p>
+      <form onSubmit={(event) => { event.preventDefault(); onSubmit(); }}>
+        <label className="login-field"><span>Work email</span><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="username" required /></label>
+        <label className="login-field"><span>Password</span><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" required /></label>
+        {error && <div className="login-error" role="alert"><ShieldAlert size={15} />{error}</div>}
+        <button className="btn btn-primary login-submit" disabled={busy}>{busy ? <RefreshCw className="spin" size={16} /> : <LockKeyhole size={16} />} Sign in securely</button>
+      </form>
+      <div className="login-local-note"><LockKeyhole size={15} /><span>Local prototype · no public registration. Configure your credentials in <code>backend/.env</code>.</span></div>
+    </section>
+    <div className="login-footer">SentinelAML <span>•</span> Explainable signals. Human-led decisions.</div>
+  </div>;
+}
+
 function App() {
   const [page, setPage] = useState<PageKey>("overview");
   const [accessTokenState, setAccessTokenState] = useState<string | null>(null);
