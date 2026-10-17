@@ -401,8 +401,10 @@ function App() {
     if (!result) return;
     const headers = ["alert_id", "rule_id", "severity", "title", "subject_reference", "evidence_row_numbers", "explanation"];
     const escapeCsv = (value: unknown) => {
-      const text = Array.isArray(value) ? value.join("; ") : String(value ?? "");
-      return `"${text.replace(/"/g, '""')}"`;
+      const rawText = Array.isArray(value) ? value.join("; ") : String(value ?? "");
+      // Prevent spreadsheet formula injection from source-controlled account identifiers.
+      const safeText = /^[=+\\-@\\t\\r]/.test(rawText) ? "'" + rawText : rawText;
+      return `"${safeText.replace(/"/g, '""')}"`;
     };
     const csv = [headers.join(","), ...result.alerts.map((alert) => headers.map((header) => escapeCsv((alert as unknown as Record<string, unknown>)[header])).join(","))].join("\r\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
