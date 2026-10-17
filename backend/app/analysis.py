@@ -97,15 +97,16 @@ def _canonicalize(frame: pd.DataFrame, mapping: dict[str, str | None]) -> tuple[
     invalid_amount = int(out["amount"].isna().sum())
     invalid_source = int(out["source_account"].isna().sum())
     valid = out["timestamp"].notna() & out["amount"].notna() & out["source_account"].notna()
-    invalid_indices = out.loc[~valid, "source_row_number"].head(20).astype(int).tolist()
     quality: list[dict[str, Any]] = []
-    for key, count, message in [
-        ("INVALID_TIMESTAMP", invalid_time, "Rows with missing or unparseable timestamps."),
-        ("INVALID_AMOUNT", invalid_amount, "Rows with missing or non-numeric transaction amounts."),
-        ("MISSING_SOURCE_ACCOUNT", invalid_source, "Rows with a missing source account identifier."),
-    ]:
+    quality_checks = [
+        ("INVALID_TIMESTAMP", invalid_time, "Rows with missing or unparseable timestamps.", out["timestamp"].isna()),
+        ("INVALID_AMOUNT", invalid_amount, "Rows with missing or non-numeric transaction amounts.", out["amount"].isna()),
+        ("MISSING_SOURCE_ACCOUNT", invalid_source, "Rows with a missing source account identifier.", out["source_account"].isna()),
+    ]
+    for key, count, message, condition in quality_checks:
         if count:
-            quality.append({"finding_key": key, "severity": "medium", "message": message, "affected_rows": count, "example_row_numbers": invalid_indices})
+            examples = out.loc[condition, "source_row_number"].head(20).astype(int).tolist()
+            quality.append({"finding_key": key, "severity": "medium", "message": message, "affected_rows": count, "example_row_numbers": examples})
     out["_valid"] = valid
     # Keep originals for a safe quality example without leaking full records.
     out["_original_timestamp"] = original_time
