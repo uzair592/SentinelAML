@@ -10,6 +10,8 @@ erDiagram
     APP_USER ||--o{ DATASET_IMPORT : initiates
     DATA_SOURCE ||--o{ DATASET_IMPORT : supplies
     DATASET_IMPORT ||--o{ SOURCE_COLUMN_MAPPING : maps
+    DATASET_IMPORT ||--o{ TRANSACTION_RECORD : optionally_persists
+    TRANSACTION_RECORD ||--o{ ALERT_EVIDENCE : referenced_by
     DATASET_IMPORT ||--o{ ANALYSIS_RUN : analyzed_in
     APP_USER ||--o{ ANALYSIS_RUN : starts
     ANALYSIS_RUN ||--o{ AML_ALERT : produces
@@ -70,6 +72,22 @@ erDiagram
         string source_column
         float confidence
     }
+    TRANSACTION_RECORD {
+        uuid id PK
+        uuid dataset_import_id FK
+        string source_record_key
+        int source_row_number
+        datetime transaction_timestamp
+        decimal amount
+        string currency
+        string source_account_token
+        string destination_account_token
+        string customer_reference_token
+        string transaction_type
+        string channel
+        string status
+        json permitted_attributes
+    }
     ANALYSIS_RUN {
         uuid id PK
         uuid dataset_import_id FK
@@ -105,6 +123,7 @@ erDiagram
     ALERT_EVIDENCE {
         uuid id PK
         uuid alert_id FK
+        uuid transaction_record_id FK
         int source_row_number
         string transaction_reference
         json evidence
@@ -176,7 +195,7 @@ erDiagram
 - `organization_id` belongs on every tenant-owned record; production queries must scope by the authenticated tenant.
 - Database passwords, full secret-bearing connection URLs, access tokens, and raw private keys must never be persisted in `DATA_SOURCE`.
 - `host_reference` should identify an administrator-approved host entry, not be a free-form secret connection string.
-- Evidence should be minimized and protected. Prefer stable source-row references plus selected fields rather than copying complete financial records into every alert.
+- Evidence should be minimized and protected. Prefer stable source-row references plus selected fields rather than copying complete financial records into every alert. The optional `TRANSACTION_RECORD` table is for a later, explicitly approved persistence mode; default MVP analysis keeps source rows in memory and does not persist them.
 - Store each analysis rule's version and parameters with the run so reviewers can reproduce why an alert was generated.
 - Use foreign keys, indexes on time/status/organization, unique constraints for rule keys and source mappings, and soft-delete/retention policy where appropriate.
 - The `vector` type in the diagram is conceptual; implementation may use pgvector or a separate approved retrieval service.
